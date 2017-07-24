@@ -1,0 +1,5 @@
+myPythonTools are a series of python functions that are used for various things in my PhD
+
+--Anthony: A toolkit and script for project CT-Cine data onto 3D surfaces meshes. Anthony uses host mesh fitting to deform the surface mesh, and natural splines to create trajectory paths for openFOAM.
+
+--ImageTools: A series of functions and scripts for interacting with CT data.
