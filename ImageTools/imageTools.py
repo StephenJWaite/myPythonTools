@@ -215,7 +215,19 @@ def calculateZintercept(p1,p2,zPos,elems):
 
 	return xPos, yPos
 
+def weightedGreyScale(imageData):
+	#check that this is an RGB array.
+	if imageData.shape[2]~=3:
+		print 'Error in weightedGreyScale, image is not RGB'
+		return -1
+	#set up an empty 3D array
+	grey=np.zeros((imageData.shape[0],imageData.shape[1]))
+	#loop through the array x and y dimension and average
+	for rownum in range(len(imageData)):
+		for colnum in range(len(imageData[rownum])):
+			grey[rownum][colnum] = 0.299*imageData[rownum][colnum] + 0.587*imageData[rownum][colnum] + 0.114*imageData[rownum][colnum]
 
+    return grey
 
 
 

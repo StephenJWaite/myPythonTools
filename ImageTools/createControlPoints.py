@@ -21,6 +21,16 @@ contourData = np.loadtxt(contourDir + 'Contors.txt')
 print '    input contour size:', np.shape(contourData)
 
 basePlot = plt.imshow(imageFile)
+
+#rezero the slide numbers imageFile[:,2]
+startSlide = np.min(contourData[:,2])
+print 'Starting slide:',startSlide
+
+#loop through and plot the first contour
+for i in range(len(contourData)):
+	if contourData[i,2] <= startSlide:
+		plt.scatter(contourData[i,0]+3,contourData[i,1]+3)
+
 plt.show()
 
 
