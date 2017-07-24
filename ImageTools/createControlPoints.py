@@ -5,6 +5,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
+import imageTools as IT
 
 
 print 'Running createControlPoints'
@@ -20,7 +21,9 @@ print '    input Image size:', np.shape(imageFile)
 contourData = np.loadtxt(contourDir + 'Contors.txt')
 print '    input contour size:', np.shape(contourData)
 
-basePlot = plt.imshow(imageFile)
+basePlot = plt.figure()
+fuck = basePlot.add_subplot(111)
+fuck.imshow(imageFile)
 
 #rezero the slide numbers imageFile[:,2]
 startSlide = np.min(contourData[:,2])
@@ -29,7 +32,11 @@ print 'Starting slide:',startSlide
 #loop through and plot the first contour
 for i in range(len(contourData)):
 	if contourData[i,2] <= startSlide:
-		plt.scatter(contourData[i,0]+3,contourData[i,1]+3)
+		fuck.scatter(contourData[i,0]+5,contourData[i,1]+5)
+
+fuck.axis('equal')
+
+points = IT.pickPoints(3,basePlot)
 
 plt.show()
 

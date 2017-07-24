@@ -215,9 +215,10 @@ def calculateZintercept(p1,p2,zPos,elems):
 
 	return xPos, yPos
 
+#Function weightedGreyScale converts an RGB image into a weighted gray scale
 def weightedGreyScale(imageData):
 	#check that this is an RGB array.
-	if imageData.shape[2]~=3:
+	if imageData.shape[2]!=3:
 		print 'Error in weightedGreyScale, image is not RGB'
 		return -1
 	#set up an empty 3D array
@@ -227,7 +228,35 @@ def weightedGreyScale(imageData):
 		for colnum in range(len(imageData[rownum])):
 			grey[rownum][colnum] = 0.299*imageData[rownum][colnum] + 0.587*imageData[rownum][colnum] + 0.114*imageData[rownum][colnum]
 
-    return grey
+	return grey
+
+def pickPoints(numPoints,fig):
+	if numPoints == 0:
+		freeSelect = True
+	else:
+		freeSelect = False
+		numPoints = numPoints
+
+	def onclick(event):
+		return event.x, event.y
+
+	cid = fig.canvas.mpl_connect('button_press_event', onclick)
+
+#	def __init__(self,numPoints,fig):
+#		if numPoints == 0:
+#			self.freeSelect = True
+#		else:
+#			self.freeSelect = False
+#			self.numPoints = numPoints
+#
+#		self.xs = list(fig.get_xdata())
+#
+#		if not self.freeSelect:
+#			for i in range(self.numPoints):
+#				self.cid = fig.figure.canvas.mpl_connect('button_press_event',self)
+
+
+
 
 
 
