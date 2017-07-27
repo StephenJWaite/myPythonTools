@@ -11,9 +11,9 @@ import imageTools as IT
 print 'Running createControlPoints'
 
 #Set up working directories
-workingDir = '/home/stephen/Documents/Python/myPythonTools/imageToolsTestSpace/'
-imageDir = '/home/stephen/Documents/Python/myPythonTools/imageToolsTestSpace/'
-contourDir = '/home/stephen/Documents/Python/myPythonTools/imageToolsTestSpace/'
+workingDir = '/home/stephen/Documents/GitRepos/myPythonTools/imageToolsTestSpace/'
+imageDir = '/home/stephen/Documents/GitRepos/myPythonTools/imageToolsTestSpace/'
+contourDir = '/home/stephen/Documents/GitRepos/myPythonTools/imageToolsTestSpace/'
 
 #Read in input files
 imageFile = mpimg.imread(imageDir + '6948_02.png')
