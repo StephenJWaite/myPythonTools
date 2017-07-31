@@ -291,48 +291,44 @@ def snapSphere(contourData,point,sR):
 				sphereNodes=np.append(sphereNodes,[[dist,i]],axis=0)
 
 	#sort the sphereNodes
-	print 'Dist vector shape: ', np.shape(sphereNodes)
-	print 'Dist vector:', sphereNodes
 	sphereNodes=sphereNodes[np.argsort(sphereNodes[:,0]),:]
-	print 'Sorted Dist vector:', sphereNodes
-	#Calculate the distance between the two closets nodes
-	#nodeDist=(np.sqrt((contourData[sphereNodes[0,1],0]
-	#          -contourData[sphereNodes[1,1],0])**2
-	#          +(contourData[sphereNodes[0,1],1]
-	#          -contourData[sphereNodes[1,1],1])**2
-	#         ))
-	#Calculate the angle between contour nodes and the picked node
+	#We take the closes points, and now only consider the nodes on either side
+	nodeGroup=np.asarray([sphereNodes[0,1],sphereNodes[0,1]-1,sphereNodes[0,1]+1]).astype(int)
+	print 'Sorted sphere nodes:\n', sphereNodes
+	print 'nodeGroup:',nodeGroup
+    #Create an empty array for the two end points spaning the user point  
 	LinePoints=np.zeros((2,2))
-<<<<<<< HEAD
-	print 'LinePoints:', LinePoints
-	print 'sphereNodes:', sphereNodes[0,1]
-	print 'contourData[sphereNodes[0,1],:]:',contourData[sphereNodes[0,1].astype(int),:]
-	LinePoints[0,:]=contourData[sphereNodes[0,1].astype(int),:]
-	LinePoints[1,:]=contourData[sphereNodes[1,1].astype(int),:]
+	pointPosition=1
+    #Store the end points IS THE ORDER IMPORTANT?
+	LinePoints[0,:]=contourData[nodeGroup[0],:]
+	LinePoints[1,:]=contourData[nodeGroup[pointPosition],:]
+	lineCheck=False
+
+	print 'Running lineCheck'
 	xPt,yPt = projectPointToLine(LinePoints,point)
-	print 'xPt: ',xPt, ' yPlst: ',yPt
-=======
-	print 'sphereNodes:',sphereNodes[0,1]
-	LinePoints[0,:]=contourData[sphereNodes[0,1],:]
-	LinePoints[1,:]=contourData[sphereNodes[1,1],:]
-	xPt,yPt = projectPointToLine(LinePoints,point)
+	lineCheck=checkPointOnLineInterval(LinePoints,[xPt,yPt])
+	if not lineCheck:
+		pointPosition=pointPosition+1
+		LinePoints[1,:]=contourData[nodeGroup[pointPosition],:]
+		xPt,yPt = projectPointToLine(LinePoints,point)
+		lineCheck=checkPointOnLineInterval(LinePoints,[xPt,yPt])	
+		#If the next segment also fales, our picked point is the nearest node
+		if not lineCheck:
+			xPt=contourData[nodeGroup[0],0]
+			yPt=contourData[nodeGroup[0],1]
+
 	print 'xPt: ',xPt, ' yPt: ',yPt
 	print 'Line Points: ', LinePoints
-	print 'Line Point indices: ', sphereNodes[0,1], sphereNodes[1,1]
-	if sphereNodes[0,1]<sphereNodes[1,1]:
+	print 'Line Point indices: ', nodeGroup[0], nodeGroup[pointPosition]
+	if nodeGroup[0]<nodeGroup[pointPosition]:
 		print 'left is smaller'
-		return xPt, yPt, sphereNodes[0,1].astype(int)
+		return xPt, yPt, nodeGroup[0]
 	else:
 		print 'right is smaller'
-		return xPt, yPt, sphereNodes[1,1].astype(int)
->>>>>>> fec9cc917aceadb83cfac210e45f47fb5c3428eb
-
+		return xPt, yPt, nodeGroup[pointPosition]
 
 def projectPointToLine(Line,Point):
 	print 'Running projectPointToLine'
-	print 'Line shape: ', np.shape(Line)
-	print 'Line values: ', Line
-	print 'Point values: ', Point
 	#Calculate the gradient Mt (target) and constant Ct
 	Ct=(Line[0,1]*Line[1,0] - Line[1,1]*Line[0,0])/(Line[1,0]-Line[0,0])
 	Mt=(Line[0,1]-Ct)/Line[0,0]
@@ -343,8 +339,6 @@ def projectPointToLine(Line,Point):
 	#Calculate the intercept between the two lines
 	xPt=(Cs-Ct)/(Mt-Ms)
 	yPt=Mt*xPt+Ct
-	print 'xPt: ',xPt, ' yPt: ',yPt
-
 	#linePlot = plt.figure()
 	#axLine = linePlot.add_subplot(111)
 	#axLine.plot([Line[0,0],Line[1,0]],[Line[0,1],Line[1,1]])
@@ -352,10 +346,42 @@ def projectPointToLine(Line,Point):
 	#axLine.scatter(xPt,yPt, facecolors='r', edgecolors='r')
 	#axLine.plot([Point[0],xPt],[Point[1],yPt],color='r')
 	#axLine.axis('equal')
-
 	return xPt,yPt
 
+def checkPointOnLineInterval(Line,Point):
+	yChecks=[Line[0,1]-Point[1],Line[1,1]-Point[1]]
+	xChecks=[Line[0,0]-Point[0],Line[1,0]-Point[0]]
+	passY=False
+	passX=False
+	if (np.sign(yChecks[0])!=np.sign(yChecks[1])):
+		passY=True
+	if (np.sign(xChecks[0])!=np.sign(xChecks[1])):
+		passX=True
 
+	print 'yChecks:',yChecks
+	print 'xChecks:',xChecks
+	print 'passY',passY
+	print 'passX',passX
+	#Return results
+	if (passY and passX):
+		return True
+	else:
+		return False
+
+
+#Old line check code
+#	while not lineCheck:
+#		print 'Running lineCheck loop'
+#		xPt,yPt = projectPointToLine(LinePoints,point)
+#		lineCheck=checkPointOnLineInterval(LinePoints,[xPt,yPt])
+#		print 'LinePoint: ',LinePoints
+#		print 'pointPosition: ',pointPosition
+#		if not lineCheck:
+#			pointPosition=pointPosition+1
+#			LinePoints[1,:]=contourData[sphereNodes[pointPosition,1].astype(int),:]
+		#sanity break
+#		if pointPosition==3:
+#			lineCheck=True
 
 
 
