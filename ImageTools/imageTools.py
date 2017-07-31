@@ -303,6 +303,7 @@ def snapSphere(contourData,point,sR):
 	#         ))
 	#Calculate the angle between contour nodes and the picked node
 	LinePoints=np.zeros((2,2))
+<<<<<<< HEAD
 	print 'LinePoints:', LinePoints
 	print 'sphereNodes:', sphereNodes[0,1]
 	print 'contourData[sphereNodes[0,1],:]:',contourData[sphereNodes[0,1].astype(int),:]
@@ -310,6 +311,21 @@ def snapSphere(contourData,point,sR):
 	LinePoints[1,:]=contourData[sphereNodes[1,1].astype(int),:]
 	xPt,yPt = projectPointToLine(LinePoints,point)
 	print 'xPt: ',xPt, ' yPlst: ',yPt
+=======
+	print 'sphereNodes:',sphereNodes[0,1]
+	LinePoints[0,:]=contourData[sphereNodes[0,1],:]
+	LinePoints[1,:]=contourData[sphereNodes[1,1],:]
+	xPt,yPt = projectPointToLine(LinePoints,point)
+	print 'xPt: ',xPt, ' yPt: ',yPt
+	print 'Line Points: ', LinePoints
+	print 'Line Point indices: ', sphereNodes[0,1], sphereNodes[1,1]
+	if sphereNodes[0,1]<sphereNodes[1,1]:
+		print 'left is smaller'
+		return xPt, yPt, sphereNodes[0,1].astype(int)
+	else:
+		print 'right is smaller'
+		return xPt, yPt, sphereNodes[1,1].astype(int)
+>>>>>>> fec9cc917aceadb83cfac210e45f47fb5c3428eb
 
 
 def projectPointToLine(Line,Point):
