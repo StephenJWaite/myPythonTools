@@ -303,10 +303,19 @@ def snapSphere(contourData,point,sR):
 	#         ))
 	#Calculate the angle between contour nodes and the picked node
 	LinePoints=np.zeros((2,2))
+	print 'sphereNodes:',sphereNodes[0,1]
 	LinePoints[0,:]=contourData[sphereNodes[0,1],:]
 	LinePoints[1,:]=contourData[sphereNodes[1,1],:]
 	xPt,yPt = projectPointToLine(LinePoints,point)
 	print 'xPt: ',xPt, ' yPt: ',yPt
+	print 'Line Points: ', LinePoints
+	print 'Line Point indices: ', sphereNodes[0,1], sphereNodes[1,1]
+	if sphereNodes[0,1]<sphereNodes[1,1]:
+		print 'left is smaller'
+		return xPt, yPt, sphereNodes[0,1].astype(int)
+	else:
+		print 'right is smaller'
+		return xPt, yPt, sphereNodes[1,1].astype(int)
 
 
 def projectPointToLine(Line,Point):
@@ -326,13 +335,13 @@ def projectPointToLine(Line,Point):
 	yPt=Mt*xPt+Ct
 	print 'xPt: ',xPt, ' yPt: ',yPt
 
-	linePlot = plt.figure()
-	axLine = linePlot.add_subplot(111)
-	axLine.plot([Line[0,0],Line[1,0]],[Line[0,1],Line[1,1]])
-	axLine.scatter(Point[0],Point[1], facecolors='g', edgecolors='g')
-	axLine.scatter(xPt,yPt, facecolors='r', edgecolors='r')
-	axLine.plot([Point[0],xPt],[Point[1],yPt],color='r')
-	axLine.axis('equal')
+	#linePlot = plt.figure()
+	#axLine = linePlot.add_subplot(111)
+	#axLine.plot([Line[0,0],Line[1,0]],[Line[0,1],Line[1,1]])
+	#axLine.scatter(Point[0],Point[1], facecolors='g', edgecolors='g')
+	#axLine.scatter(xPt,yPt, facecolors='r', edgecolors='r')
+	#axLine.plot([Point[0],xPt],[Point[1],yPt],color='r')
+	#axLine.axis('equal')
 
 	return xPt,yPt
 
