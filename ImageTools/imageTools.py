@@ -282,9 +282,7 @@ def snapSphere(contourData,point,sR):
 	sphereNodes=np.ones((1,2))*-1
 	for i in range(len(contourData)):
 		if (np.abs(contourData[i,0]-point[0])<=sR) and (np.abs(contourData[i,1]-point[1])<=sR):
-			print 'Point ', i, ': ', contourData[i,:]
 			dist=np.sqrt((contourData[i,0]-point[0])**2 + (contourData[i,1]-point[1])**2)
-			print 'Dist: ',dist
 			if sphereNodes[0,0]==-1:
 				sphereNodes[0,:]=[dist,i]
 			else:
@@ -292,10 +290,15 @@ def snapSphere(contourData,point,sR):
 
 	#sort the sphereNodes
 	sphereNodes=sphereNodes[np.argsort(sphereNodes[:,0]),:]
-	#We take the closes points, and now only consider the nodes on either side
-	nodeGroup=np.asarray([sphereNodes[0,1],sphereNodes[0,1]-1,sphereNodes[0,1]+1]).astype(int)
-	print 'Sorted sphere nodes:\n', sphereNodes
-	print 'nodeGroup:',nodeGroup
+	#We take the closest points, and now only consider the nodes on either side. Special case if its at the end of the array
+	if sphereNodes[0,1]==len(contourData)-1:
+		print 'Contour Length',len(contourData)-1
+		nodeGroup=np.asarray([sphereNodes[0,1],sphereNodes[0,1]-1,0]).astype(int)
+	elif sphereNodes[0,1]==0:
+		nodeGroup=np.asarray([sphereNodes[0,1],sphereNodes[0,1]+1,len(contourData)-1]).astype(int)
+	else:
+		nodeGroup=np.asarray([sphereNodes[0,1],sphereNodes[0,1]-1,sphereNodes[0,1]+1]).astype(int)
+	
     #Create an empty array for the two end points spaning the user point  
 	LinePoints=np.zeros((2,2))
 	pointPosition=1
@@ -317,15 +320,139 @@ def snapSphere(contourData,point,sR):
 			xPt=contourData[nodeGroup[0],0]
 			yPt=contourData[nodeGroup[0],1]
 
-	print 'xPt: ',xPt, ' yPt: ',yPt
-	print 'Line Points: ', LinePoints
-	print 'Line Point indices: ', nodeGroup[0], nodeGroup[pointPosition]
+	#Special case, if the two spanning nodes are the ends nodes
+	if ((nodeGroup[0]==0) and (nodeGroup[pointPosition] == len(contourData)-1)) or ((nodeGroup[0]==len(contourData)-1) and (nodeGroup[pointPosition] == 0)):
+		print 'Spanning end nodes'
+		return [xPt, yPt], len(contourData)-1
 	if nodeGroup[0]<nodeGroup[pointPosition]:
 		print 'left is smaller'
-		return xPt, yPt, nodeGroup[0]
+		return [xPt, yPt], nodeGroup[0]
 	else:
 		print 'right is smaller'
-		return xPt, yPt, nodeGroup[pointPosition]
+		return [xPt, yPt], nodeGroup[pointPosition]
+
+#Function sortContourData takes an input contour data text file, and sorts the file into a list format
+def sortContourData(contourData):
+	print 'Running sortContourData'
+	#loop throught the data set and determine how many contours there are
+	count=0
+	for i in range(len(contourData)-1):
+		if contourData[i,2] != contourData[i+1,2]:
+			count=count+1
+
+	#set up a blank list
+	contours=[1]*count
+	print 'Number of contours:',count
+	#set a counter that will count the number of points in a contour
+	count=0
+	#set a boolean flag toggle to TRUE
+	toggle=True
+	#zero the contour number data
+	contourData[:,2]=contourData[:,2]-contourData[0,2]
+	#loop through the contourData list
+	for i in range(len(contourData)):
+		#set the current working (temporal) contour
+		if toggle:
+			index=contourData[i,2].astype(int)
+			toggle=False 
+
+		if contourData[i,2]==index:
+			count=count+1
+		else:
+			contours[index]=contourData[(i-count):i,0:2]
+			toggle=True
+
+	return contours
+
+#Function marches around a contour, placeing the user specified number of slave points at
+#equidistance intervals between Master points
+def seedSlavePoints(distVector,contourData,MasterPoints,seedNumber):
+	print 'Running seedSlavePoints'
+	ControlPoints=np.zeros(((len(MasterPoints)+len(MasterPoints)*seedNumber),2))
+	print 'Total Number of Control Points:',np.shape(ControlPoints)
+	#Start from the first master Point
+	CPpos=0
+	CNP=MasterPoints[0,2].astype(int)
+	#set up a phantom master point again
+	MasterPoints=np.concatenate((MasterPoints,MasterPoints[0,:].reshape(1,3)))
+	for i in range(len(MasterPoints)-1):
+		print 'CPpos (master point):',CPpos
+		print 'CNP value:',CNP
+		segSize=distVector[i]/seedNumber
+		print 'DistVector',distVector[i],'seedNumber',seedNumber,'segSize',segSize
+		Dist=0
+		ControlPoints[CPpos,:]=MasterPoints[i,:2]
+		CPpos=CPpos+1
+		while CNP!=MasterPoints[i+1,2]:
+			if CNP==(len(contourData)-1):
+				segDist=calculateLineLength(contourData[CNP,:],contourData[0,:])
+				if Dist+segDist >=segSize:
+					print 'placing a seed point at position',CPpos
+					ControlPoints[CPpos,:],remainder = calculatePointPositionOnLine(segSize,segDist,contourData[CNP,:],contourData[CNP,:])
+					Dist=remainder
+					CPpos=CPpos+1
+				else:
+					Dist=Dist+segDist
+
+				CNP=0
+			else:
+				segDist=calculateLineLength(contourData[CNP,:],contourData[CNP+1,:])
+				if (Dist+segDist >= segSize):
+					print 'placing a seed point at position',CPpos
+					ControlPoints[CPpos,:],remainder = calculatePointPositionOnLine(segSize,segDist,contourData[CNP,:],contourData[CNP+1,:])
+					Dist=remainder
+					CPpos=CPpos+1
+				else:
+					Dist=Dist+segDist
+				CNP=CNP+1
+
+			print 'CNP value:',CNP,'Distance',Dist
+
+def calculatePointPositionOnLine(segSize,segDist,point1,point2):
+	#calculate the fraction along the line length that the seed point will lie
+	frac=((segSize-segDist)/segSize)
+	xPos=(point2[0]-point1[0])*frac + point1[0]
+	yPos=(point2[1]-point1[1])*frac + point1[1]
+	remainder=(1-frac)*segDist
+	return [xPos,yPos],remainder
+
+
+#Function takes a data intervale of 2D coordinates, and marches along calculating the total distance.
+def calculateDistanceVector(contourData,MasterPoints):
+	print 'Running calculateDistanceVector'
+	distVector=np.zeros(len(MasterPoints))
+	#Start from the first master Point, check that its not right at the end
+	if MasterPoints[0,2]==(len(contourData)-1):
+		print 'god damit'
+		CNP=0
+	else:
+		CNP=MasterPoints[0,2].astype(int)+1
+	
+	MPcount=0
+	distVector[MPcount]=calculateLineLength(contourData[MasterPoints[0,2].astype(int),:],contourData[CNP,:])
+	#create a phantom node to stop the loop condition
+	MasterPoints=np.concatenate((MasterPoints,MasterPoints[0,:].reshape(1,3)))
+	while CNP!=MasterPoints[0,2].astype(int):
+		#check for a loop around
+		print 'Max/CNP:',(len(contourData)-1),'/',CNP
+		if CNP==(len(contourData)-1):
+			distVector[MPcount]=distVector[MPcount]+calculateLineLength(contourData[CNP,:],contourData[0,:])
+			CNP=0
+		else:
+			distVector[MPcount]=distVector[MPcount]+calculateLineLength(contourData[CNP,:],contourData[CNP+1,:])
+			CNP=CNP+1
+
+		print 'Distance',distVector[MPcount]
+		if (CNP==MasterPoints[MPcount+1,2]):
+			MPcount=MPcount+1
+			print 'MPcount',MPcount
+
+	return distVector
+
+
+
+def calculateLineLength(Point1,Point2):
+	return np.sqrt((Point2[0]-Point1[0])**2 + (Point2[1]-Point1[1])**2)
 
 def projectPointToLine(Line,Point):
 	print 'Running projectPointToLine'
@@ -358,10 +485,6 @@ def checkPointOnLineInterval(Line,Point):
 	if (np.sign(xChecks[0])!=np.sign(xChecks[1])):
 		passX=True
 
-	print 'yChecks:',yChecks
-	print 'xChecks:',xChecks
-	print 'passY',passY
-	print 'passX',passX
 	#Return results
 	if (passY and passX):
 		return True
