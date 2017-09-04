@@ -26,16 +26,16 @@ sortedContours=IT.sortContourData(contourData)
 
 basePlot = plt.figure()
 ax = basePlot.add_subplot(111)
-ax.imshow(imageFile,cmap='gray') #Note Greys gives amazing contracts, may this for segmentation???
+ax.imshow(imageFile,cmap='gray') #Note Greys gives amazing contraction contrast, mayne this for segmentation???
 
 targetContour=sortedContours[0]
 
 #TEST CODE - sub sample contour data for easy workability
-print 'targetContour.shape:',np.shape(targetContour)
-targetContour=targetContour[0::3]
-print 'subsampled targetContour.shape:',np.shape(targetContour)
+print '\ttargetContour.shape:',np.shape(targetContour)
+targetContour=targetContour[0::5]
+print '\tsubsampled targetContour.shape:',np.shape(targetContour)
 
-ax.plot(targetContour[:,0],targetContour[:,1],'-r')
+ax.plot(targetContour[:,0],targetContour[:,1],'-xr')
 ax.axis('equal')
 
 #Set the number of master control Points
@@ -44,6 +44,7 @@ MCP=4
 sR=40
 #Create a blank array for master points
 MPoints=np.zeros((MCP,3))
+
 #For the user specified number of master points, loop through and select.
 for i in range(MCP):
 	#Get the user input
@@ -61,8 +62,10 @@ for i in range(MCP):
 print 'Master Points\n',MPoints
 distVector=IT.calculateDistanceVector(targetContour,MPoints)
 print 'Dist Vector\n',distVector
-seedNumber=2
-controlPoints=IT.seedSlavePoints(distVector,contourData,MPoints,seedNumber)
+seedNumber=4
+controlPoints=IT.seedSlavePoints(distVector,targetContour,MPoints,seedNumber,ax)
+ax.plot(controlPoints[:,0],controlPoints[:,1],'ob')
+
 plt.show()
 
 

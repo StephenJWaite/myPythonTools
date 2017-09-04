@@ -365,9 +365,18 @@ def sortContourData(contourData):
 	return contours
 
 #Function marches around a contour, placeing the user specified number of slave points at
-#equidistance intervals between Master points
-def seedSlavePoints(distVector,contourData,MasterPoints,seedNumber):
+#equidistance intervals between Master points.
+#Dist: the current distance that the crawler is at for a slaveSegment. One it moves to a new slaveSegment, it resest its self to the remainder.
+#segDist:The distance of the current dataSegment (not this is a segment between raw data points, not the slave points we are seeding, thats slaveSegment.)
+#segSize: The distance of the current slaveSegment, this is some really shitty naming from me, my bad. 
+#MDist: the current distance for the whole master segment. resets itself when it moves to a new master point
+#CPpos: Current control point position (seed points, so could rename this aswell.)
+#CNP: Current Node Points, this stores the value of the current node ID from the data array, its used to tell when the crawler has made it to the next masterPoint.
+def seedSlavePoints(distVector,contourData,MasterPoints,seedNumber,ax):
+	import pdb
+	#pdb.set_trace()
 	print 'Running seedSlavePoints'
+	seedNumber=seedNumber+1
 	ControlPoints=np.zeros(((len(MasterPoints)+len(MasterPoints)*seedNumber),2))
 	print 'Total Number of Control Points:',np.shape(ControlPoints)
 	#Start from the first master Point
@@ -375,45 +384,73 @@ def seedSlavePoints(distVector,contourData,MasterPoints,seedNumber):
 	CNP=MasterPoints[0,2].astype(int)
 	#set up a phantom master point again
 	MasterPoints=np.concatenate((MasterPoints,MasterPoints[0,:].reshape(1,3)))
-	for i in range(len(MasterPoints)-1):
-		print 'CPpos (master point):',CPpos
-		print 'CNP value:',CNP
-		segSize=distVector[i]/seedNumber
-		print 'DistVector',distVector[i],'seedNumber',seedNumber,'segSize',segSize
+	#Plotting for tests
+	test = plt.figure()
+	ax = test.add_subplot(111)
+	ax.plot(contourData[:,0],contourData[:,1]*-1,'-or')
+	plt.xlim(-0, 500)
+	plt.ylim(-500, 0)
+	plt.gca().set_aspect('equal', adjustable='box')
+
+	#axLine.scatter(Point[0],Point[1], facecolors='g', edgecolors='g')
+	#axLine.scatter(xPt,yPt, facecolors='r', edgecolors='r')
+	#axLine.plot([Point[0],xPt],[Point[1],yPt],color='r')
+	#axLine.axis('equal')
+	for i in range(1):#range(len(MasterPoints)-1):
+		#set the slaveSegment size for the current slave segment.
+		segSize=distVector[i]/(seedNumber)
+		print 'DistVector',distVector[i],'seedNumber',seedNumber-1,'MasterNumber',len(MasterPoints),'segSize',segSize
+		#Initislise vaiables and arrays using the current control point (which is the master point for this segment)
 		Dist=0
+		MDist=0
 		ControlPoints[CPpos,:]=MasterPoints[i,:2]
+		#increment to the first slave point
 		CPpos=CPpos+1
+		#looping through data points, while the the current node is not the next master point
 		while CNP!=MasterPoints[i+1,2]:
-			if CNP==(len(contourData)-1):
-				segDist=calculateLineLength(contourData[CNP,:],contourData[0,:])
-				if Dist+segDist >=segSize:
-					print 'placing a seed point at position',CPpos
-					ControlPoints[CPpos,:],remainder = calculatePointPositionOnLine(segSize,segDist,contourData[CNP,:],contourData[CNP,:])
-					Dist=remainder
-					CPpos=CPpos+1
-				else:
-					Dist=Dist+segDist
-
-				CNP=0
+			#If else to check if we are at the end of the array, to loop back to the beginning.
+			if CNP==(len(contourData)-1): 
+				target=0
 			else:
-				segDist=calculateLineLength(contourData[CNP,:],contourData[CNP+1,:])
-				if (Dist+segDist >= segSize):
-					print 'placing a seed point at position',CPpos
-					ControlPoints[CPpos,:],remainder = calculatePointPositionOnLine(segSize,segDist,contourData[CNP,:],contourData[CNP+1,:])
-					Dist=remainder
-					CPpos=CPpos+1
-				else:
-					Dist=Dist+segDist
-				CNP=CNP+1
+				target=CNP+1
 
-			print 'CNP value:',CNP,'Distance',Dist
+			#calculate the length of the data segment that we are on.
+			segDist=calculateLineLength(contourData[CNP,:],contourData[target,:])
+			MDist=MDist+segDist
+			print '\tCPpos',CPpos,'CNP',CNP,'SegDist',segDist,'Dist',Dist,'MDist',MDist
+
+			#if the current distance, plus the length of the data segment is larger then our current slaveSegment spacing. we will calculate where the slave seed should be placed, and what remains
+			if Dist+segDist > segSize:	
+				ControlPoints[CPpos,:],remainder = calculatePointPositionOnLine(segSize-Dist,segDist,contourData[CNP,:],contourData[target,:])
+				ax.plot(ControlPoints[CPpos,0],ControlPoints[CPpos,1]*-1,'ob')
+				print '\t\tplacing a seed point at position',CPpos,'Point Positions [',ControlPoints[CPpos,0],ControlPoints[CPpos,1],'], remainder:',remainder
+				Dist=remainder
+				CPpos=CPpos+1
+				#on the offchance that the segment distance of the data points is huge, begger then our seed segment size, we nee to place multiple points on the data segment.
+				while remainder > segSize:
+					print '\t\t\trunning while loop'
+					ControlPoints[CPpos,:],remainder = calculatePointPositionOnLine((segDist-(remainder-segSize)),segDist,contourData[CNP,:],contourData[target,:])
+					ax.plot(ControlPoints[CPpos,0],ControlPoints[CPpos,1]*-1,'or')
+					CPpos=CPpos+1
+
+				Dist=remainder
+			else:
+				Dist=Dist+segDist
+
+			CNP=target
+			#print 'CNP value:',CNP,'Distance',Dist
+
+	return ControlPoints
 
 def calculatePointPositionOnLine(segSize,segDist,point1,point2):
 	#calculate the fraction along the line length that the seed point will lie
-	frac=((segSize-segDist)/segSize)
+	#frac=((segSize-segDist)/segSize)
+	frac=(segSize/segDist)	
 	xPos=(point2[0]-point1[0])*frac + point1[0]
 	yPos=(point2[1]-point1[1])*frac + point1[1]
 	remainder=(1-frac)*segDist
+	print '\t\tRunning calculatePointPositionOnLine'
+	print '\t\tFrac value:',frac,'remainder ratio',(1-frac)
 	return [xPos,yPos],remainder
 
 
@@ -434,12 +471,14 @@ def calculateDistanceVector(contourData,MasterPoints):
 	MasterPoints=np.concatenate((MasterPoints,MasterPoints[0,:].reshape(1,3)))
 	while CNP!=MasterPoints[0,2].astype(int):
 		#check for a loop around
-		print 'Max/CNP:',(len(contourData)-1),'/',CNP
+		#print 'Max/CNP:',(len(contourData)-1),'/',CNP
 		if CNP==(len(contourData)-1):
 			distVector[MPcount]=distVector[MPcount]+calculateLineLength(contourData[CNP,:],contourData[0,:])
+			#print 'nodes (',CNP,') [',contourData[CNP,0],contourData[CNP,1],'] (',0,') [',contourData[0,0],contourData[0,1],'] Distance',distVector[MPcount]
 			CNP=0
 		else:
 			distVector[MPcount]=distVector[MPcount]+calculateLineLength(contourData[CNP,:],contourData[CNP+1,:])
+			#print 'nodes (',CNP,') [',contourData[CNP,0],contourData[CNP,1],'] (',CNP+1,') [',contourData[CNP+1,0],contourData[CNP+1,1],'] Distance',distVector[MPcount]
 			CNP=CNP+1
 
 		print 'Distance',distVector[MPcount]
