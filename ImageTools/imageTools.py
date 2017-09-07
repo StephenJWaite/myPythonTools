@@ -396,7 +396,7 @@ def seedSlavePoints(distVector,contourData,MasterPoints,seedNumber,ax):
 	#axLine.scatter(xPt,yPt, facecolors='r', edgecolors='r')
 	#axLine.plot([Point[0],xPt],[Point[1],yPt],color='r')
 	#axLine.axis('equal')
-	for i in range(1):#range(len(MasterPoints)-1):
+	for i in range(len(MasterPoints)-1):
 		#set the slaveSegment size for the current slave segment.
 		segSize=distVector[i]/(seedNumber)
 		print 'DistVector',distVector[i],'seedNumber',seedNumber-1,'MasterNumber',len(MasterPoints),'segSize',segSize

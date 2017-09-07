@@ -11,9 +11,9 @@ import imageTools as IT
 print 'Running createControlPoints'
 
 #Set up working directories
-workingDir = '/home/stephen/Documents/GitRepos/myPythonTools/imageToolsTestSpace/'
-imageDir = '/home/stephen/Documents/GitRepos/myPythonTools/imageToolsTestSpace/'
-contourDir = '/home/stephen/Documents/GitRepos/myPythonTools/imageToolsTestSpace/'
+workingDir = './../imageToolsTestSpace/'
+imageDir = './../imageToolsTestSpace/'
+contourDir = './../imageToolsTestSpace/'
 
 #Read in input files
 imageFile = mpimg.imread(imageDir + '6948_02.png')
@@ -56,6 +56,13 @@ for i in range(MCP):
 	#targetContour=np.concatenate((targetContour[:index+1,:],np.asarray([xPt,yPt]).reshape(1,2),targetContour[index+1:,:]))
 	targetContour=np.concatenate((targetContour[:index+1,:],MPoints[i,:2].reshape(1,2),targetContour[index+1:,:]))
 	MPoints[i,2]=index+1
+	#dirty shift fix, should recode this whole section to first determine
+    #where the M points should all go, and then place them in order after
+    #wards, but since num MP is low, its not gonna slow stuff down.
+	for j in range(i):
+		if MPoints[i,2]<MPoints[j,2]:
+			MPoints[j,2]=MPoints[j,2]+1
+
 	ax.scatter(MPoints[i,0],MPoints[i,1], facecolors='y', edgecolors='y')
 
 #Seed the slave control points between the masters with equidistance spacing.
