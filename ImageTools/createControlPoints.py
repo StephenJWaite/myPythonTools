@@ -14,12 +14,12 @@ plt.switch_backend('TkAgg')
 print 'Running createControlPoints'
 
 #Set up working directories
-workingDir = './../imageToolsTestSpace/6948_02/'
-imageDir = './../imageToolsTestSpace/6948_02/Images/'
-contourDir = './../imageToolsTestSpace/6948_02/'
+workingDir = './../imageToolsTestSpace/6948_06/'
+imageDir = './../imageToolsTestSpace/6948_06/Images/'
+contourDir = './../imageToolsTestSpace/6948_06/'
 
 #Read in input files
-contourData = np.loadtxt(contourDir + 'Contors.txt')
+contourData = np.loadtxt(contourDir + 'Contours.txt')
 print '    input contour size:', np.shape(contourData)
 #Sort the contour data
 sortedContours=IT.sortContourData(contourData)

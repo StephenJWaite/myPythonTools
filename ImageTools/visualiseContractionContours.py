@@ -4,7 +4,11 @@ import numpy as np
 from scipy.interpolate import interp1d
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+import matplotlib.animation
 import imageTools as IT
+import time
+
+plt.switch_backend('TkAgg')
 
 print '\nRunning script visualiseContractionContours...'
 
@@ -56,60 +60,73 @@ MapFunc=interp1d(CMap[:,0],CMap[:,1],kind='cubic')
 
 for i in range(np.shape(activeContours)[0]):
 	spoint=np.int(MapFunc(np.float(contourInformation[i][0])))
-	print '!!!some error checks!!!'
-	print 'i:',i,'spoint',spoint
-	#contractionMatrix[i][:spoint]=1
-	#contractionMatrix[i][spoint:spoint+np.int(contourInformation[i][1])]=2
-	#contractionMatrix[1][(spoint+np.int(contourInformation[i][1])):]=3
-	#with a for loop
+	print 'Processing slice:',i,'at',contourInformation[i][0]
+	print '\tStart Points:',spoint, 'End Point:',spoint+int(contourInformation[i][1])
 	print 'looping from',0,'to',spoint
 	for j in range(spoint):
-		print 'i:',i,'j:',j,'slice:',0
-		#print contourData[i][0][1:5,:]
+		#print 'i:',i,'j:',j,'slice:',0
 		contractionMatrix[j][i]=contourData[i][0]
-		#print '\n',contractionMatrix[j][i][1:5,:]
 
-	print 'looping from',spoint,'to',np.int(spoint+CMap[i,1])
-	for j in range(spoint,np.int(spoint+CMap[i,1])):
-		print 'i:',i,'j:',j,'slice',(j-spoint)
-		#print contourData[i][j-spoint][1:5,:]
-		#print '\n',contractionMatrix[j-1][i]#[1:5,:]
-		#print '\n',contractionMatrix[j+1][i]#[1:5,:]
-		#print np.shape(contourData[i][j-spoint]), np.shape(contractionMatrix[j][i])
+	print 'looping from',spoint,'to',np.int(spoint+int(contourInformation[i][1]))
+	for j in range(spoint,np.int(spoint+int(contourInformation[i][1]))):
+		#print 'i:',i,'j:',j,'slice',(j-spoint)
 		contractionMatrix[j][i]=contourData[i][j-spoint]
-		#print '\n',contractionMatrix[j-1][i][1:5,:]
-		#print '\n',contractionMatrix[j][i][1:5,:]
 
-
-	print 'looping from',np.int(spoint+CMap[i,1]),'to',endtime
-	for j in range(np.int(spoint+CMap[i,1]),endtime):
-		#print contourData[i][-1][1:5,:]
-		print 'i:',i,'j:',j,'slice: end'
+	print 'looping from',np.int(spoint+int(contourInformation[i][1])),'to',endtime
+	for j in range(np.int(spoint+int(contourInformation[i][1])),endtime):
+		#print 'i:',i,'j:',j,'slice: end'
 		contractionMatrix[j][i]=contourData[i][-1]
-	#print '------------------------------'
-	#print '------------------------------'
-	#print '\n',contractionMatrix[23][i][1:5,:]
-	#print '\n',contractionMatrix[24][i][1:5,:]
-	#print '------------------------------'
-	#print '------------------------------'
 
+#fig=plt.figure()
+#ax3D=fig.add_subplot(111, projection='3d')
 
-#sanity plot
-print np.shape(contourData) 
+#for i in range(endtime):
+#	ax3D.plot(contractionMatrix[i][0][:,0],contractionMatrix[i][0][:,1],i,'-or')
 
-print np.shape(contractionMatrix[0][0])
+#Some methods for temporal ploting#
 
-
-fig=plt.figure()
-ax3D=fig.add_subplot(111, projection='3d')
+#####################################################################
+#Brute force with plot options, this totaly works though #Baller
+fig2=plt.figure(2)
+timePlot=fig2.add_subplot(111,projection='3d')
+timePlot.set_xlim(50,350)
+timePlot.set_ylim(100,400)
+plt.ion()
 
 for i in range(endtime):
-	print i
-	#print contractionMatrix[i][1][1:5,:]
-	print np.shape(contractionMatrix[i][0])
-	ax3D.plot(contractionMatrix[i][0][:,0],contractionMatrix[i][0][:,1],i,'-or')
+	timePlot.clear()
+	timePlot.set_xlim(50,350)
+	timePlot.set_ylim(100,400)
+	timePlot.view_init(elev=-81+i, azim=-113+i)
+	timePlot.plot(contractionMatrix[i][0][:,0],contractionMatrix[i][0][:,1],5,'-or')
+	timePlot.plot(contractionMatrix[i][1][:,0],contractionMatrix[i][1][:,1],1,'-or')
+	plt.pause(0.05)
 
+plt.ioff()
 plt.show()
+#######################################################################
+
+######################################################################
+#Using animation functionality in matplotlib
+#testFig=plt.figure(2)
+#ax = plt.axes(xlim=(0, 2), ylim=(-2, 2))
+#line,=ax.plot([],[],'r-')
+
+#def update(i,):
+#	line.set_data(contractionMatrix[i][0][:,0],contractionMatrix[i][0][:,1])
+#	return line
+
+#anim=matplotlib.animation.FuncAnimation(testFig,update,frames=10,repeat=True)
+#plt.show()
+########################################################################
+
+
+
+
+
+
+
+
 
 
 
