@@ -34,10 +34,10 @@ MCP=4
 #Set the snap sphereRadius
 sR=40
 #set the number of slave control points per master point
-seedNumber=4
+seedNumber=8
 
 #Begin loop
-for imLoop in range(4):#range(np.shape(sortedContours)[0]):
+for imLoop in range(np.shape(sortedContours)[0]):
     targetContour=sortedContours[imLoop]
     ax = basePlot.add_subplot(111)
     imageFile = mpimg.imread(imageDir + str(imLoop+1) +'.png')
@@ -87,13 +87,23 @@ for imLoop in range(4):#range(np.shape(sortedContours)[0]):
     basePlot.clf()
     ControlPointsArray[imLoop]=controlPoints
 
-    #Lets now look in 3D
+#Lets now look in 3D
 fig2=plt.figure(2)
 ax3D=fig2.add_subplot(111, projection='3d')
-for imLoop in range(4):#range(np.shape(sortedContours)[0]):
-    #plotContour=ControlPointsArray[imLoop]
+for imLoop in range(np.shape(sortedContours)[0]):
     ax3D.plot(ControlPointsArray[imLoop][:,0],ControlPointsArray[imLoop][:,1],imLoop,'-or')
 
-
 plt.show()
+
+#Write outfile
+#Set the z position
+#Set the total time (number of contours)
+with file(workingDir+'Results.txt','w') as outfile:
+	outfile.write('#Z position: {0}\n'.format(5))
+	outfile.write('#Contraction length: {0}\n'.format(np.shape(sortedContours)[0]))
+	for i in range(np.shape(sortedContours)[0]):
+		outfile.write('#Contour: {0}\n'.format(i))
+		np.savetxt(outfile,ControlPointsArray[i])
+
+
 print 'Finished createControlPoints'

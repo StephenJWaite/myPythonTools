@@ -517,13 +517,6 @@ def projectPointToLine(Line,Point):
 		xPt=(Cs-Ct)/(Mt-Ms)
 		yPt=Mt*xPt+Ct
 
-	#linePlot = plt.figure()
-	#axLine = linePlot.add_subplot(111)
-	#axLine.plot([Line[0,0],Line[1,0]],[Line[0,1],Line[1,1]])
-	#axLine.scatter(Point[0],Point[1], facecolors='g', edgecolors='g')
-	#axLine.scatter(xPt,yPt, facecolors='r', edgecolors='r')
-	#axLine.plot([Point[0],xPt],[Point[1],yPt],color='r')
-	#axLine.axis('equal')
 	return xPt,yPt
 
 def checkPointOnLineInterval(Line,Point):
@@ -542,17 +535,26 @@ def checkPointOnLineInterval(Line,Point):
 	else:
 		return False
 
+def readContourFile(filePath):
+	#Function readContourFile is used to read in createControlPoints.py write files.
+	#These files contain two bits of header information. Their Z position, and 
+	#the number of contours in the file. These are first read and then np.loadtxt 
+	#and reshpare are used to format the contour data.
+	print 'Running readContourFile...'
+	print 'Opening from location',filePath
+	f=open(filePath,'r')
+	#get the Z position
+	zPos=f.readline().split()[2]
+	#print 'zPos:',zPos
+	#get the number of contours position
+	numContours=f.readline().split()[2]
+	#print 'Number of Contours:',numContours
 
-#Old line check code
-#	while not lineCheck:
-#		print 'Running lineCheck loop'
-#		xPt,yPt = projectPointToLine(LinePoints,point)
-#		lineCheck=checkPointOnLineInterval(LinePoints,[xPt,yPt])
-#		print 'LinePoint: ',LinePoints
-#		print 'pointPosition: ',pointPosition
-#		if not lineCheck:
-#			pointPosition=pointPosition+1
-#			LinePoints[1,:]=contourData[sphereNodes[pointPosition,1].astype(int),:]
-		#sanity break
-#		if pointPosition==3:
-#			lineCheck=True
+	#read in the contour data, reshape it and store in a list
+	contours=np.loadtxt(filePath)
+	#print 'reshaping',contours.shape,'to [',int(numContours),contours.shape[0]/int(numContours),2,']'
+	contours=contours.reshape((int(numContours),contours.shape[0]/int(numContours),2))
+	contours.tolist()
+
+	return zPos,numContours,contours
+
