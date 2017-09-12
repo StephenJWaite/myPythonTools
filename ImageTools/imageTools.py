@@ -3,6 +3,7 @@
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.interpolate import interp1d
 
 def helloWorld():
 	print 'Hello Stephen, you nailed it'
@@ -557,4 +558,54 @@ def readContourFile(filePath):
 	contours.tolist()
 
 	return zPos,numContours,contours
+
+def createContractionMatrix(activeContours,contourInformation,contourData,CMap):
+
+	print 'Running createContractionMatrix...'
+	
+	#Print out some sanity statistics
+	print 'Contour information:'
+	for i in range(np.size(activeContours)):
+		print '\t',activeContours[i].rstrip(),'zPos:',contourInformation[i][0],'number Contours',contourInformation[i][1]
+
+	#So the current plan is, to bit a time range (roughly 2 minutes).
+	#we create a nxd array where n is the number of slice planes we are using, and d is seconds.
+	#using our contraciton map from literature, we will place active contours in the correct
+	#times, and duplicate their first and last slices to rill out time on either side.
+	#will need to calculate a suitable end time, as some contours contract for a while.
+	#This will be dependent on when they start in the contraciton map. 
+	#For now we will take the largest contraciton time and tack it onto the end time in the 
+	#CMAP
+	endtime=np.int(CMap[-1,1]+max(np.asarray(contourInformation)[:,1].astype(float)))+1
+	print 'End time is:',endtime
+
+	#set up the contractionMatrix
+	#contractionMatrix=[[0]*np.shape(activeContours)[0]]*endtime <-never do this
+	contractionMatrix=[[0]*np.shape(activeContours)[0] for i in range(endtime)]
+	#
+	print 'contractionMatrix shape:',np.shape(contractionMatrix)
+	MapFunc=interp1d(CMap[:,0],CMap[:,1],kind='cubic')
+
+	for i in range(np.shape(activeContours)[0]):
+		spoint=np.int(MapFunc(np.float(contourInformation[i][0])))
+		print 'Processing slice:',i,'at',contourInformation[i][0]
+		print '\tStart Points:',spoint, 'End Point:',spoint+int(contourInformation[i][1])
+		print 'looping from',0,'to',spoint
+		for j in range(spoint):
+			#print 'i:',i,'j:',j,'slice:',0
+			contractionMatrix[j][i]=contourData[i][0]
+
+		print 'looping from',spoint,'to',np.int(spoint+int(contourInformation[i][1]))
+		for j in range(spoint,np.int(spoint+int(contourInformation[i][1]))):
+			#print 'i:',i,'j:',j,'slice',(j-spoint)
+			contractionMatrix[j][i]=contourData[i][j-spoint]
+
+		print 'looping from',np.int(spoint+int(contourInformation[i][1])),'to',endtime
+		for j in range(np.int(spoint+int(contourInformation[i][1])),endtime):
+			#print 'i:',i,'j:',j,'slice: end'
+			contractionMatrix[j][i]=contourData[i][-1]
+
+	return contractionMatrix,endtime
+
+
 
