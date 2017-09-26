@@ -607,5 +607,32 @@ def createContractionMatrix(activeContours,contourInformation,contourData,CMap):
 
 	return contractionMatrix,endtime
 
+def calculateCentroidPosition(x,y):
+	return sum(x)/len(x),sum(y)/len(y)
+
+def calculateCentroidSize(x,y):
+	cX,cY=calculateCentroidPosition(x,y)
+	print cX
+	print cY
+	print sum((x-cX)**2 + (y-cY)**2)
+	print np.sqrt(sum((x-cX)**2 + (y-cY)**2))
+	return np.sqrt(sum((x-cX)**2 + (y-cY)**2))
+
+def calculateClosedContourArea(x,y):
+	return 0.5*np.abs(np.dot(x,np.roll(y,1))-np.dot(y,np.roll(x,1)))
+
+def PolygonArea(x,y):
+    n = len(x) # of corners
+    area = 0.0
+    for i in range(n):
+        j = (i + 1) % n
+        area += x[i] * y[j]
+        area -= x[j] * y[i]
+    area = abs(area) / 2.0
+    return area
+
+    #https://stackoverflow.com/questions/24467972/calculate-area-of-polygon-given-x-y-coordinates <-test these later dawg
+
+
 
 

@@ -43,13 +43,6 @@ contractionMatrix,endtime=IT.createContractionMatrix(activeContours,contourInfor
 #lets make a nxm spatial array for the first time point, where n=(x,y,z) and m are the nodes
 cMshape=np.shape(contractionMatrix)
 
-#Set up plot variables
-fig2=plt.figure(2)
-timePlot=fig2.add_subplot(111,projection='3d')
-timePlot.set_xlim(50,350)
-timePlot.set_ylim(100,400)
-plt.ion()
-
 #=============================================================================#
 # fititng parameters for host mesh fitting
 host_mesh_pad = 10.0 # host mesh padding around slave points
@@ -60,9 +53,11 @@ sobd = [4,4,4]
 sobw = 1e-10
 xtol = 1e-12
 
-# source points for fitting
-source_points_fitting_file = workingDir+'RumenWithInletOutlet_outfile.xyz'
-source_points_passive = np.loadtxt(source_points_fitting_file)
+
+#load in the OF patches
+wallPatchPoints=np.loadtxt(workingDir+'OpenFOAMPatches/wallPatchNodes_outfile.xyz')
+inletPatchPoints=np.loadtxt(workingDir+'OpenFOAMPatches/inletPatchNodes_outfile.xyz')
+outletPatchPoints=np.loadtxt(workingDir+'OpenFOAMPatches/outletPatchNodes_outfile.xyz')
 
 #source points as contours
 temp=np.ones((cMshape[1],cMshape[2],cMshape[3]+1))
@@ -70,27 +65,12 @@ for i in range(cMshape[1]):
 	print 'Shape check:',np.shape(temp[i,:,:2]),np.shape(contractionMatrix[0][i])
 	temp[i,:,:2]=(contractionMatrix[0][i])-256
 	print 'zPos:',contourInformation[i][0]
-	temp[i,:,2]=temp[i,:,2]*np.float(contourInformation[i][0])
-	#temp[i,:,2]=temp[i,:,2]*-np.float(contourInformation[i][0])#-375
-
-#Read in any fixed points
-#fixedContour1=np.loadtxt(workingDir+'FixedContours/InletFixedContour1')
-#fixedContour2=np.loadtxt(workingDir+'FixedContours/InletFixedContour2')
-#fixedContour3=np.loadtxt(workingDir+'FixedContours/FixedContour1')
-#fixedContour4=np.loadtxt(workingDir+'FixedContours/OutletFixedContour1')
-#fixedContour5=np.loadtxt(workingDir+'FixedContours/OutletFixedContour2')
-
-#fixedContours=scipy.vstack([fixedContour1,fixedContour2,fixedContour3,fixedContour4,fixedContour5])
+	temp[i,:,2]=temp[i,:,2]*-np.float(contourInformation[i][0])-375
 
 print 'countour shape:',np.shape(temp.reshape((cMshape[1]*cMshape[2],cMshape[3]+1)))
-#print 'fixedcontour shape',fixedContour.shape
 
 source_points_fitting = temp.reshape((cMshape[1]*cMshape[2],cMshape[3]+1))
 
-#With fixed contours
-#source_points_fitting = scipy.vstack([temp.reshape((cMshape[1]*cMshape[2],cMshape[3]+1)),fixedContours])
-
-#########################################################################################################
 #Loop through time points
 for timePoint in range(11,12):#range(20,cMshape[0]):
 
@@ -100,23 +80,11 @@ for timePoint in range(11,12):#range(20,cMshape[0]):
 		print 'Shape check:',np.shape(temp[i,:,:2]),np.shape(contractionMatrix[timePoint][i])
 		temp[i,:,:2]=(contractionMatrix[timePoint][i])-256
 		print 'zPos:',contourInformation[i][0]
-		#temp[i,:,2]=temp[i,:,2]*-np.float(contourInformation[i][0])-375
+		temp[i,:,2]=temp[i,:,2]*-np.float(contourInformation[i][0])-375
 
-	timePlot.clear()
-	timePlot.set_xlim(50,350)
-	timePlot.set_ylim(100,400)
-	timePlot.view_init(elev=-81+i, azim=-113+i)
-	timePlot.plot(contractionMatrix[0][0][:,0],contractionMatrix[0][0][:,1],5,'-xb')
-	timePlot.plot(contractionMatrix[0][1][:,0],contractionMatrix[0][1][:,1],1,'-xb')
-	timePlot.plot(contractionMatrix[timePoint][0][:,0],contractionMatrix[timePoint][0][:,1],5,'-or')
-	timePlot.plot(contractionMatrix[timePoint][1][:,0],contractionMatrix[timePoint][1][:,1],1,'-or')
-	plt.pause(0.05)
 	# source points to be passived deformed (not fitted)
 	#target_points_file = '/home/stephen/Documents/PhD_data/RandomSTLS/RumenSlices2.xyz'
 	target_points = temp.reshape((cMshape[1]*cMshape[2],cMshape[3]+1))
-
-	#With fixed contours
-	#target_points = scipy.vstack([temp.reshape((cMshape[1]*cMshape[2],cMshape[3]+1)),fixedContours])
 
 	# host mesh fit source fitting points to target points and
 	# apply HMF transform to passive source points
@@ -146,7 +114,7 @@ for timePoint in range(11,12):#range(20,cMshape[0]):
 
 	# make host mesh
 	host_mesh = GFF.makeHostMeshMulti(
-            		source_points_passive.T,
+            		wallPatchPoints.T,
                 	host_mesh_pad,
                 	host_elem_type,
                 	host_elems,
@@ -156,19 +124,38 @@ for timePoint in range(11,12):#range(20,cMshape[0]):
 	#Store the original host mesh position
 	HostMeshOrig=host_mesh.get_field_parameters()
 
-	#For passive deform
-	# calculate the emdedding (xi) coordinates of passive
-	# source points.
-	source_points_passive_xi = host_mesh.find_closest_material_points(
-                            	source_points_passive,
+	#embedding each patch For passive deform
+	wall_Patch_xi = host_mesh.find_closest_material_points(
+                            	wallPatchPoints,
                             	initGD=[50,50,50],
                             	verbose=True,
                             	)[0]
 
-	#make passive source point evaluator function
-	eval_source_points_passive = geometric_field.makeGeometricFieldEvaluatorSparse(
+	wall_Patch_passive = geometric_field.makeGeometricFieldEvaluatorSparse(
 									host_mesh, [1,1],
-    								matPoints=source_points_passive_xi,
+    								matPoints=wall_Patch_xi,
+                                	)
+
+	inlet_Patch_xi = host_mesh.find_closest_material_points(
+                            	inletPatchPoints,
+                            	initGD=[50,50,50],
+                            	verbose=True,
+                            	)[0]
+
+	inlet_Patch_passive = geometric_field.makeGeometricFieldEvaluatorSparse(
+									host_mesh, [1,1],
+    								matPoints=inlet_Patch_xi,
+                                	)
+
+	outlet_Patch_xi = host_mesh.find_closest_material_points(
+                            	outletPatchPoints,
+                            	initGD=[50,50,50],
+                            	verbose=True,
+                            	)[0]
+
+	outlet_Patch_passive = geometric_field.makeGeometricFieldEvaluatorSparse(
+									host_mesh, [1,1],
+    								matPoints=outlet_Patch_xi,
                                 	)
 
 	# host mesh fit
@@ -185,27 +172,30 @@ for timePoint in range(11,12):#range(20,cMshape[0]):
                     )
 	
 	# evaluate the new positions of the passive source points
-	source_points_passive_hmf = eval_source_points_passive(host_x_opt).T
+	wall_patch_hmf = wall_Patch_passive(host_x_opt).T
+	inlet_patch_hmf = inlet_Patch_passive(host_x_opt).T
+	outlet_patch_hmf = outlet_Patch_passive(host_x_opt).T
 
 	#write out the Results
-	np.savetxt(workingDir+'./../Geoms/FittingResults/1_1_2-'+str(timePoint)+'.xyz',source_points_passive_hmf)
-#########################################################################################################
+	np.savetxt(workingDir+'./../Geoms/FittingResults/wall'+str(timePoint)+'.xyz',wall_patch_hmf)
+	np.savetxt(workingDir+'./../Geoms/FittingResults/inlet'+str(timePoint)+'.xyz',inlet_patch_hmf)
+	np.savetxt(workingDir+'./../Geoms/FittingResults/outlet'+str(timePoint)+'.xyz',outlet_patch_hmf)
+#=============================================================#
 
-
-
-#plt.ioff()
-#plt.show()
+plt.ioff()
+plt.show()
 # view
 v = fieldvi.fieldvi()
 #v.addData('Origin',np.zeros((4,3)),renderArgs={'mode':'sphere', 'scale_factor':5, 'color':(1,0,0)})
-#v.addData('target points', target_points, renderArgs={'mode':'sphere', 'scale_factor':3, 'color':(1,0,0)})
+v.addData('target points', target_points, renderArgs={'mode':'sphere', 'scale_factor':3, 'color':(1,0,0)})
 v.addData('source points fitting points', source_points_fitting, renderArgs={'mode':'sphere', 'scale_factor':2, 'color':(0.5,0,0)})
 #v.addData('source points fitting', source_points_fitting, renderArgs={'mode':'sphere', 'scale_factor':3, 'color':(3,0,0)})
-#v.addData('Host Mesh Orig', HostMeshOrig[:,:,0].T, renderArgs={'mode':'sphere','scale_factor':5, 'color':(0,0,0.5)})
-#v.addData('source points fitting hmf', source_points_fitting_hmf, renderArgs={'mode':'point'})
-#v.addData('Host Mesh Deformed', host_x_opt[:,:,0].T, renderArgs={'mode':'sphere','scale_factor':5, 'color':(0,0.25,0)})
-v.addData('source points passive hmf', source_points_passive, renderArgs={'mode':'sphere', 'scale_factor':1, 'color':(0,0,0.6)})
-#v.addData('source points passive hmf', source_points_passive_hmf, renderArgs={'mode':'sphere', 'scale_factor':1, 'color':(0,0,0.6)})
+v.addData('Host Mesh Orig', HostMeshOrig[:,:,0].T, renderArgs={'mode':'sphere','scale_factor':5, 'color':(0,0,0.5)})
+v.addData('source points fitting hmf', source_points_fitting_hmf, renderArgs={'mode':'point'})
+v.addData('Host Mesh Deformed', host_x_opt[:,:,0].T, renderArgs={'mode':'sphere','scale_factor':5, 'color':(0,0.25,0)})
+v.addData('wall patch points hmf', wall_patch_hmf, renderArgs={'mode':'sphere', 'scale_factor':1, 'color':(0,0,0.2)})
+v.addData('inlet patch points hmf', inlet_patch_hmf, renderArgs={'mode':'sphere', 'scale_factor':1, 'color':(0,0,0.5)})
+v.addData('outlet patch points hmf', outlet_patch_hmf, renderArgs={'mode':'sphere', 'scale_factor':1, 'color':(0,0,0.8)})
 
 v.configure_traits()
 v.scene.background=(0,0,0)
