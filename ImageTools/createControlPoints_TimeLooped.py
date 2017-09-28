@@ -14,9 +14,9 @@ plt.switch_backend('TkAgg')
 print 'Running createControlPoints'
 
 #Set up working directories
-workingDir = './../imageToolsTestSpace/6948_06/'
-imageDir = './../imageToolsTestSpace/6948_06/Images/'
-contourDir = './../imageToolsTestSpace/6948_06/'
+workingDir = './../imageToolsTestSpace/6948_04/'
+imageDir = './../imageToolsTestSpace/6948_04/Images/'
+contourDir = './../imageToolsTestSpace/6948_04/'
 
 #Read in input files
 contourData = np.loadtxt(contourDir + 'Contours.txt')
@@ -40,7 +40,7 @@ seedNumber=8
 for imLoop in range(np.shape(sortedContours)[0]):
     targetContour=sortedContours[imLoop]
     ax = basePlot.add_subplot(111)
-    imageFile = mpimg.imread(imageDir + str(imLoop+1) +'.png')
+    imageFile = mpimg.imread(imageDir + str(imLoop) +'.png')
     print '    input Image size:', np.shape(imageFile)
     ax.imshow(imageFile,cmap='gray')
     plt.draw()
@@ -83,15 +83,15 @@ for imLoop in range(np.shape(sortedContours)[0]):
     controlPoints=IT.seedSlavePoints(distVector,targetContour,MPoints,seedNumber,ax)
     ax.plot(controlPoints[:,0],controlPoints[:,1],'ob')
     plt.draw()
-    time.sleep(1)
+    time.sleep(0.5)
     basePlot.clf()
     ControlPointsArray[imLoop]=controlPoints
 
 #Lets now look in 3D
-fig2=plt.figure(2)
-ax3D=fig2.add_subplot(111, projection='3d')
-for imLoop in range(np.shape(sortedContours)[0]):
-    ax3D.plot(ControlPointsArray[imLoop][:,0],ControlPointsArray[imLoop][:,1],imLoop,'-or')
+#fig2=plt.figure(2)
+#ax3D=fig2.add_subplot(111, projection='3d')
+#for imLoop in range(np.shape(sortedContours)[0]):
+#    ax3D.plot(ControlPointsArray[imLoop][:,0],ControlPointsArray[imLoop][:,1],imLoop,'-or')
 
 plt.show()
 
@@ -99,11 +99,30 @@ plt.show()
 #Set the z position
 #Set the total time (number of contours)
 with file(workingDir+'Results.txt','w') as outfile:
-	outfile.write('#Z position: {0}\n'.format(5))
-	outfile.write('#Contraction length: {0}\n'.format(np.shape(sortedContours)[0]))
-	for i in range(np.shape(sortedContours)[0]):
-		outfile.write('#Contour: {0}\n'.format(i))
-		np.savetxt(outfile,ControlPointsArray[i])
+    outfile.write('#Z position: {0}\n'.format(5))
+    outfile.write('#Contraction length: {0}\n'.format(np.shape(sortedContours)[0]))
+    for i in range(np.shape(sortedContours)[0]):
+        cX,cY=IT.calculateCentroidPosition(ControlPointsArray[i][:,0],ControlPointsArray[i][:,1])
+        print 'Centroid pos', cX,cY
+        CS=IT.calculateCentroidSize(ControlPointsArray[i][:,0],ControlPointsArray[i][:,1])
+        print 'Centroid Size', CS
+        Area=IT.calculateClosedContourArea(ControlPointsArray[i][:,0],ControlPointsArray[i][:,1])
+        print 'Area:', Area
+        outfile.write('#Contour: {0} Centroid: [{1},{2}] Centroid Size: {3} Area: {4}\n'.format(i,cX,cY,CS,Area))
+        np.savetxt(outfile,ControlPointsArray[i])
 
+#with file(workingDir+'Results.txt','w') as outfile:
+	#outfile.write('#Z position: {0}\n'.format(5))
+	#outfile.write('#Contraction length: {0}\n'.format(np.shape(sortedContours)[0]))   
+    #for i in range(np.shape(sortedContours)[0]):
+        #print i
+        #cX,cY=IT.calculateCentroidPosition(ControlPointsArray[i][:,0],ControlPointsArray[i][:,1])
+        #print cX,cY
+        #CentroidSize=IT.calculateCentroidSize(ControlPointsArray[i][:,0],ControlPointsArray[i][:,1])
+        #print CentroidSize
+        #Area=IT.calculateClosedContourArea(ControlPointsArray[i][:,0],ControlPointsArray[i][:,1])
+        #print Area
+        #outfile.write('#Contour: {0} Centroid: [{0},{0}] Centroid Size: {0} Area: {0}'.format(i,cX,cY,CentroidSize,Area))
+        #np.savetxt(outfile,ControlPointsArray[i])
 
 print 'Finished createControlPoints'

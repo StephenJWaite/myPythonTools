@@ -33,6 +33,11 @@ for line in activeContours:
 
 contractionMatrix,endtime=IT.createContractionMatrix(activeContours,contourInformation,contourData,CMap)
 
+print np.shape(contractionMatrix)
+print np.shape(contourInformation)
+print contourInformation[0][0]
+print contourInformation[1][0]
+print contourInformation[2][0]
 #fig=plt.figure()
 #ax3D=fig.add_subplot(111, projection='3d')
 
@@ -53,9 +58,10 @@ for i in range(endtime):
 	timePlot.clear()
 	timePlot.set_xlim(50,350)
 	timePlot.set_ylim(100,400)
-	timePlot.view_init(elev=-81+i, azim=-113+i)
-	timePlot.plot(contractionMatrix[i][0][:,0],contractionMatrix[i][0][:,1],5,'-or')
-	timePlot.plot(contractionMatrix[i][1][:,0],contractionMatrix[i][1][:,1],1,'-or')
+	timePlot.view_init(elev=-24, azim=-163)
+	for j in range(np.shape(contractionMatrix)[1]):
+		timePlot.plot(contractionMatrix[i][j][:,0],contractionMatrix[i][j][:,1],np.float(contourInformation[j][0]),'-or')
+
 	plt.pause(0.05)
 
 plt.ioff()

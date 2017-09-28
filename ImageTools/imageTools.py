@@ -585,8 +585,10 @@ def createContractionMatrix(activeContours,contourInformation,contourData,CMap):
 	#
 	print 'contractionMatrix shape:',np.shape(contractionMatrix)
 	MapFunc=interp1d(CMap[:,0],CMap[:,1],kind='cubic')
+	print CMap
 
 	for i in range(np.shape(activeContours)[0]):
+		print np.float(contourInformation[i][0])
 		spoint=np.int(MapFunc(np.float(contourInformation[i][0])))
 		print 'Processing slice:',i,'at',contourInformation[i][0]
 		print '\tStart Points:',spoint, 'End Point:',spoint+int(contourInformation[i][1])
@@ -612,10 +614,10 @@ def calculateCentroidPosition(x,y):
 
 def calculateCentroidSize(x,y):
 	cX,cY=calculateCentroidPosition(x,y)
-	print cX
-	print cY
-	print sum((x-cX)**2 + (y-cY)**2)
-	print np.sqrt(sum((x-cX)**2 + (y-cY)**2))
+	#print cX
+	#print cY
+	#print sum((x-cX)**2 + (y-cY)**2)
+	#print np.sqrt(sum((x-cX)**2 + (y-cY)**2))
 	return np.sqrt(sum((x-cX)**2 + (y-cY)**2))
 
 def calculateClosedContourArea(x,y):

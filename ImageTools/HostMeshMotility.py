@@ -54,10 +54,10 @@ plt.ion()
 # fititng parameters for host mesh fitting
 host_mesh_pad = 10.0 # host mesh padding around slave points
 host_elem_type = 'quad333' # quadrilateral cubic host elements
-host_elems = [1,1,2] # a single element host mesh
+host_elems = [1,1,3] # a single element host mesh
 maxit = 10
 sobd = [4,4,4]
-sobw = 1e-10
+sobw = 0.00001#1e-10
 xtol = 1e-12
 
 # source points for fitting
@@ -74,13 +74,13 @@ for i in range(cMshape[1]):
 	#temp[i,:,2]=temp[i,:,2]*-np.float(contourInformation[i][0])#-375
 
 #Read in any fixed points
-#fixedContour1=np.loadtxt(workingDir+'FixedContours/InletFixedContour1')
-#fixedContour2=np.loadtxt(workingDir+'FixedContours/InletFixedContour2')
-#fixedContour3=np.loadtxt(workingDir+'FixedContours/FixedContour1')
-#fixedContour4=np.loadtxt(workingDir+'FixedContours/OutletFixedContour1')
-#fixedContour5=np.loadtxt(workingDir+'FixedContours/OutletFixedContour2')
+fixedContour1=np.loadtxt(workingDir+'FixedContours/InletFixedContour1')
+fixedContour2=np.loadtxt(workingDir+'FixedContours/InletFixedContour2')
+fixedContour3=np.loadtxt(workingDir+'FixedContours/FixedContour1')
+fixedContour4=np.loadtxt(workingDir+'FixedContours/OutletFixedContour1')
+fixedContour5=np.loadtxt(workingDir+'FixedContours/OutletFixedContour2')
 
-#fixedContours=scipy.vstack([fixedContour1,fixedContour2,fixedContour3,fixedContour4,fixedContour5])
+fixedContours=scipy.vstack([fixedContour1,fixedContour2,fixedContour3,fixedContour4,fixedContour5])
 
 print 'countour shape:',np.shape(temp.reshape((cMshape[1]*cMshape[2],cMshape[3]+1)))
 #print 'fixedcontour shape',fixedContour.shape
@@ -100,6 +100,7 @@ for timePoint in range(11,12):#range(20,cMshape[0]):
 		print 'Shape check:',np.shape(temp[i,:,:2]),np.shape(contractionMatrix[timePoint][i])
 		temp[i,:,:2]=(contractionMatrix[timePoint][i])-256
 		print 'zPos:',contourInformation[i][0]
+		temp[i,:,2]=temp[i,:,2]*np.float(contourInformation[i][0])
 		#temp[i,:,2]=temp[i,:,2]*-np.float(contourInformation[i][0])-375
 
 	timePlot.clear()
@@ -188,7 +189,7 @@ for timePoint in range(11,12):#range(20,cMshape[0]):
 	source_points_passive_hmf = eval_source_points_passive(host_x_opt).T
 
 	#write out the Results
-	np.savetxt(workingDir+'./../Geoms/FittingResults/1_1_2-'+str(timePoint)+'.xyz',source_points_passive_hmf)
+	np.savetxt(workingDir+'./../Geoms/SoblovTests/SB'+str(timePoint)+'.xyz',source_points_passive_hmf)
 #########################################################################################################
 
 
@@ -198,14 +199,14 @@ for timePoint in range(11,12):#range(20,cMshape[0]):
 # view
 v = fieldvi.fieldvi()
 #v.addData('Origin',np.zeros((4,3)),renderArgs={'mode':'sphere', 'scale_factor':5, 'color':(1,0,0)})
-#v.addData('target points', target_points, renderArgs={'mode':'sphere', 'scale_factor':3, 'color':(1,0,0)})
+v.addData('target points', target_points, renderArgs={'mode':'sphere', 'scale_factor':3, 'color':(1,0,0)})
 v.addData('source points fitting points', source_points_fitting, renderArgs={'mode':'sphere', 'scale_factor':2, 'color':(0.5,0,0)})
-#v.addData('source points fitting', source_points_fitting, renderArgs={'mode':'sphere', 'scale_factor':3, 'color':(3,0,0)})
-#v.addData('Host Mesh Orig', HostMeshOrig[:,:,0].T, renderArgs={'mode':'sphere','scale_factor':5, 'color':(0,0,0.5)})
-#v.addData('source points fitting hmf', source_points_fitting_hmf, renderArgs={'mode':'point'})
-#v.addData('Host Mesh Deformed', host_x_opt[:,:,0].T, renderArgs={'mode':'sphere','scale_factor':5, 'color':(0,0.25,0)})
-v.addData('source points passive hmf', source_points_passive, renderArgs={'mode':'sphere', 'scale_factor':1, 'color':(0,0,0.6)})
-#v.addData('source points passive hmf', source_points_passive_hmf, renderArgs={'mode':'sphere', 'scale_factor':1, 'color':(0,0,0.6)})
+v.addData('source points fitting', source_points_fitting, renderArgs={'mode':'sphere', 'scale_factor':3, 'color':(3,0,0)})
+v.addData('Host Mesh Orig', HostMeshOrig[:,:,0].T, renderArgs={'mode':'sphere','scale_factor':5, 'color':(0,0,0.5)})
+v.addData('source points fitting hmf', source_points_fitting_hmf, renderArgs={'mode':'point'})
+v.addData('Host Mesh Deformed', host_x_opt[:,:,0].T, renderArgs={'mode':'sphere','scale_factor':5, 'color':(0,0.25,0)})
+v.addData('source points passive', source_points_passive, renderArgs={'mode':'sphere', 'scale_factor':1, 'color':(0,0,0.6)})
+v.addData('source points passive hmf', source_points_passive_hmf, renderArgs={'mode':'sphere', 'scale_factor':1, 'color':(0,0,0.6)})
 
 v.configure_traits()
 v.scene.background=(0,0,0)
