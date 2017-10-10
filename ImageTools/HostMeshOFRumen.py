@@ -21,7 +21,7 @@ print 'Running HostMeshMotility...'
 
 #Step one, create out contraction Matrix
 workingDir = './../imageToolsTestSpace/'
-workingDirOF = '/home/stephen/OpenFOAM/Simulations2/Rumens/NewMotionTest1'
+workingDirOF = '/home/stephen/OpenFOAM/Simulations2/Rumens/RumenBMES'
 
 #we will have a control file that has all of the contour groups we are planning to use
 activeContours=open(workingDir+'ContourList').readlines()
@@ -30,8 +30,17 @@ activeContours=open(workingDir+'ContourList').readlines()
 CMap=np.loadtxt(workingDir+'contractionMap')
 
 #Define the patch names
-patchNames=['inlet','outlet','wall']
+patchNames=['inlet','wall']
 scale=0.001 #working in m in openFOAM, but HM is hardcoded for mm
+
+# fititng parameters for host mesh fitting
+host_mesh_pad = 10.0 # host mesh padding around slave points
+host_elem_type = 'quad333' # quadrilateral cubic host elements
+host_elems = [1,1,3] # a single element host mesh
+maxit = 10
+sobd = [4,4,4]
+sobw = 0.00001#1e-10
+xtol = 1e-12
 
 #Read in patch files, and form the passive node array.
 #load in the OF patches
@@ -69,14 +78,6 @@ contractionMatrix,endtime=IT.createContractionMatrix(activeContours,contourInfor
 cMshape=np.shape(contractionMatrix)
 
 #=============================================================================#
-# fititng parameters for host mesh fitting
-host_mesh_pad = 10.0 # host mesh padding around slave points
-host_elem_type = 'quad333' # quadrilateral cubic host elements
-host_elems = [1,1,3] # a single element host mesh
-maxit = 10
-sobd = [4,4,4]
-sobw = 0.00001#1e-10
-xtol = 1e-12
 
 #source points as contours
 temp=np.ones((cMshape[1],cMshape[2],cMshape[3]+1))
@@ -159,15 +160,15 @@ for timePoint in range(11,12):#range(20,cMshape[0]):
 	passivePoints_hmf = passivePoints_passive(host_x_opt).T
 
 	#write out the Results
-	pos=0
+	#pos=0
 	#os.mkdir(workingDirOF+'/constant/patchDisplacements')
-	for i in range(len(patchNames)):
-		print index[i]
-		print pos,index[i]
-		print passivePoints_hmf[pos:pos+5,:]
-		np.savetxt(workingDirOF+'/constant/patchDisplacements/'+patchNames[i]+'Displacement',passivePoints_hmf[pos:index[i],:]*scale)
-		FT.writeXYZtoPointsVectorField(workingDirOF+'/constant/patchDisplacements',patchNames[i])
-		pos=index[i]
+	#for i in range(len(patchNames)):
+	#	print index[i]
+	#	print pos,index[i]
+	#	print passivePoints_hmf[pos:pos+5,:]
+	#	np.savetxt(workingDirOF+'/constant/patchDisplacements/'+patchNames[i]+'Displacement',passivePoints_hmf[pos:index[i],:]*scale)
+	#	FT.writeXYZtoPointsVectorField(workingDirOF+'/constant/patchDisplacements',patchNames[i])
+	#	pos=index[i]
 #=============================================================#
 
 # view

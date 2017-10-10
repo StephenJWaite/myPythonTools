@@ -19,12 +19,12 @@ from gias.common import alignment_fitting as af
 print 'Running HostMeshMotility...'
 
 #Set the working directory
-workingDirOF = '/home/stephen/OpenFOAM/Simulations2/Rumens/RumenParallelTest/'
+workingDirOF = '/home/stephen/OpenFOAM/Simulations2/Rumens/RumenBMESDenser/'
 
 #Importing the FOAM files as passive slave points
 #Set the number of processors
-numProc=4
-patchNames=['inlet','outlet','wall']
+numProc=10
+patchNames=['inlet','wall']
 scale=0.001 #working in m now not mm
 
 #Not, this is hardcoded to work with three patches, wall, inlet and outlet, but its trivial to 
@@ -33,13 +33,13 @@ scale=0.001 #working in m now not mm
 #set up a blank list that will store each group of patch nodes
 #Loop through each processor, read the points and we assign them to a concated np array.
 #we will store their index so we can seperate them laters
-patchList=[0]*(numProc*3)
+patchList=[0]*(numProc*len(patchNames))
 print np.size(patchList)
 for i in range(numProc):
 	print '---Storing patches for processor',i,'---'
 	for j in range(len(patchNames)):
-		print j,((i*(numProc-1))+j)
-		patchList[(i*(numProc-1))+j]=FT.readPatchFile(workingDirOF+'processor'+str(i)+'/constant/',patchNames[j]+'PatchNodes')
+		print j,((i*len(patchNames))+j)
+		patchList[(i*len(patchNames))+j]=FT.readPatchFile(workingDirOF+'processor'+str(i)+'/constant/',patchNames[j]+'PatchNodes')
 
 #Now loop through all the patchList, and smoosh it all into one np array, and store the start point of each patch.
 index=[]
@@ -60,7 +60,7 @@ for patch in patchList:
 		
 print index
 
-passivePoints=np.delete(passivePoints,(0),0)/scale
+passivePoints=(np.delete(passivePoints,(0),0)/scale)
 
 
 #=============================================================#
@@ -93,10 +93,10 @@ cMshape=np.shape(contractionMatrix)
 # fititng parameters for host mesh fitting
 host_mesh_pad = 10.0 # host mesh padding around slave points
 host_elem_type = 'quad333' # quadrilateral cubic host elements
-host_elems = [1,1,2] # a single element host mesh
+host_elems = [1,1,3] # a single element host mesh
 maxit = 10
 sobd = [4,4,4]
-sobw = 1e-10
+sobw = 0.00001
 xtol = 1e-12
 
 #source points as contours
@@ -105,7 +105,7 @@ for i in range(cMshape[1]):
 	print 'Shape check:',np.shape(temp[i,:,:2]),np.shape(contractionMatrix[0][i])
 	temp[i,:,:2]=(contractionMatrix[0][i])-256
 	print 'zPos:',contourInformation[i][0]
-	temp[i,:,2]=temp[i,:,2]*-np.float(contourInformation[i][0])-375
+	temp[i,:,2]=temp[i,:,2]*np.float(contourInformation[i][0])
 
 print 'countour shape:',np.shape(temp.reshape((cMshape[1]*cMshape[2],cMshape[3]+1)))
 
@@ -120,8 +120,8 @@ for timePoint in range(11,12):#range(20,cMshape[0]):
 		print 'Shape check:',np.shape(temp[i,:,:2]),np.shape(contractionMatrix[timePoint][i])
 		temp[i,:,:2]=(contractionMatrix[timePoint][i])-256
 		print 'zPos:',contourInformation[i][0]
-		temp[i,:,2]=temp[i,:,2]*-np.float(contourInformation[i][0])-375
-
+		temp[i,:,2]=temp[i,:,2]*np.float(contourInformation[i][0])
+	
 	#Set up the target points
 	target_points = temp.reshape((cMshape[1]*cMshape[2],cMshape[3]+1))
 
@@ -182,18 +182,18 @@ for timePoint in range(11,12):#range(20,cMshape[0]):
 
 #Now we are going to break up and write out these points back into patches.
 #passivePoints_hmf=passivePoints
-newPatch=[0]*(numProc*3)
+newPatch=[0]*(numProc*len(patchNames))
 pos=0
 for i in range(numProc):
 	os.mkdir(workingDirOF+'processor'+str(i)+'/constant/patchDisplacements')
 	for j in range(len(patchNames)):
-		if index[(i*(numProc-1))+j]!=-1:
+		if index[(i*len(patchNames))+j]!=-1:
 			#we print the patchArrray at these points
-			print index[(i*(numProc-1))+j]
-			print pos,index[(i*(numProc-1))+j]
-			np.savetxt(workingDirOF+'processor'+str(i)+'/constant/patchDisplacements/'+patchNames[j]+'Displacement',passivePoints_hmf[pos:index[(i*(numProc-1))+j],:]*scale)
+			print index[(i*len(patchNames))+j]
+			print pos,index[(i*len(patchNames))+j]
+			np.savetxt(workingDirOF+'processor'+str(i)+'/constant/patchDisplacements/'+patchNames[j]+'Displacement',passivePoints_hmf[pos:index[(i*len(patchNames))+j],:]*scale)
 			FT.writeXYZtoPointsVectorField(workingDirOF+'processor'+str(i)+'/constant/patchDisplacements/',patchNames[j])
-			pos=index[(i*(numProc-1))+j]
+			pos=index[(i*len(patchNames))+j]
 		else:
 			#just print a zero
 			print i,j,patchNames[j]

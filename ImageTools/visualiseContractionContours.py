@@ -36,8 +36,8 @@ contractionMatrix,endtime=IT.createContractionMatrix(activeContours,contourInfor
 print np.shape(contractionMatrix)
 print np.shape(contourInformation)
 print contourInformation[0][0]
-print contourInformation[1][0]
-print contourInformation[2][0]
+#print contourInformation[1][0]
+#print contourInformation[2][0]
 #fig=plt.figure()
 #ax3D=fig.add_subplot(111, projection='3d')
 
@@ -65,6 +65,13 @@ for i in range(endtime):
 	plt.pause(0.05)
 
 plt.ioff()
+
+#Lets now look in 3D
+fig3=plt.figure(3)
+ax3D=fig3.add_subplot(111, projection='3d')
+for imLoop in range(3,endtime-3,2):
+    ax3D.plot(contractionMatrix[imLoop][0][:,0],contractionMatrix[imLoop][0][:,1],imLoop,'-or')
+
 plt.show()
 #######################################################################
 

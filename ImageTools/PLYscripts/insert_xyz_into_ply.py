@@ -1,8 +1,8 @@
 #script replaces xyz coords in ply file
 import numpy as np
 workingDir='/home/stephen/Documents/Python/myPythonTools/Geoms/SoblovTests/'
-filenamePLY='RumenWithInletOutlet'
-filenameXYZ='SB11'
+filenamePLY='FixAttempt2'
+filenameXYZ='BMES3'
 fid=open(workingDir+filenamePLY+'.ply','r')
 fidwrite=open(workingDir+filenameXYZ+'_outfile.ply','w')
 flag=0

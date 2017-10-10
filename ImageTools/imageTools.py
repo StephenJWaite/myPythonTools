@@ -2,6 +2,7 @@
 
 import sys
 import numpy as np
+from numpy import poly1d #<- why is this different to numpy.poly1d?
 import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
 
@@ -634,6 +635,96 @@ def PolygonArea(x,y):
     return area
 
     #https://stackoverflow.com/questions/24467972/calculate-area-of-polygon-given-x-y-coordinates <-test these later dawg
+
+def basicCubicSpline(n,xn,yn):
+	#Function basicCubicSpline takes the number of data points (n), and their x and y values, and computes 
+	#equations for basic cubic splines, where the data points are the knots
+	#Coefficents are returned in the form d*x^3 + c*x^2 + b*x + yn
+
+	#set up a series of constant vectors
+	h = np.zeros(n-1) #x spacing between knots
+	alpha = np.zeros(n-1)
+	l = np.zeros(n+1)
+	u = np.zeros(n)
+	z = np.zeros(n+1)
+	b = np.zeros(n)
+	c = np.zeros(n+1)
+	d = np.zeros(n)
+
+	#Calculate X spacing
+	for i in range(n-1):
+		h[i] = xn[i+1]-xn[i]
+
+	#Calculate alpha values
+	for i in range(1,n-1):
+		alpha[i] = (3./h[i])*(yn[i+1]-yn[i])-(3./h[i-1])*(yn[i]-yn[i-1])
+
+	#Set end point conditions for a natural spline
+	l[0] = l[n] = 1
+	u[0] = c[n] = 0
+	z[0] = z[n] = 0 
+
+	#Calculate constants l,u,z
+	for i in range(1,n-1):
+		l[i] = 2*(xn[i+1]-xn[i-1])-h[i-1]*u[i-1]
+		u[i] = h[i]/l[i]
+		z[i] = (alpha[i]-h[i-1]*z[i-1])/l[i]
+
+	for i in range(n-2,-1,-1):
+		c[i] = z[i] - u[i]*c[i+1]
+		b[i] = (yn[i+1]-yn[i])/h[i]-h[i]*(c[i+1]+2*c[i])/3
+		d[i] = (c[i+1]-c[i])/(3*h[i])
+
+	return yn,b,c,d
+
+
+
+def basicCubicSplinePlot(a,b,c,d,xn):
+	#Function basicCubicSplinePlot is used to plot spines from function basicCubicSpline for test purposes. It takes 
+	#the equation coefficents in the form d*x^3 + c*x^3 + b*x + a and the xn positions
+	n = np.size(xn)
+	if (np.size(a) != n) or (np.size(b) != n) or (np.size(c)-1 != n) or (np.size(d) != n): 
+		print 'Error: vector lengths do not match'
+		return 0
+	else:
+		for i in range(n-1):
+			root = poly1d(xn[i],True)
+			poly = 0
+			poly = d[i]*(root)**3
+			poly = poly + c[i]*(root)**2
+			poly = poly + b[i]*root
+			poly = poly + a[i]
+			#print 'poly:',poly
+			#set up a vector of x values from xi to xi+1
+			x_step=0.05
+			x_pts = np.arange(xn[i],xn[i+1]+x_step,x_step)
+			plt.plot(x_pts,poly(x_pts),'-')
+		return 1
+
+def transformCubicCoeffiencets(a,b,c,d,xn):
+	#function uses poly1d to return the coefficents of a spline in the form of a cubic equation.
+	n = np.size(xn)
+	aCoeffs=np.zeros(n)
+	bCoeffs=np.zeros(n)
+	cCoeffs=np.zeros(n)
+	dCoeffs=np.zeros(n)
+
+	if (np.size(a) != n) or (np.size(b) != n) or (np.size(c)-1 != n) or (np.size(d) != n): 
+		print 'Error: vector lengths do not match'
+		return 0,0,0,0
+	else:
+		for i in range(n-1):
+			root = poly1d(xn[i],True)
+			poly = 0
+			poly = d[i].tolist()*(root)**3
+			poly = poly + c[i].tolist()*(root)**2
+			poly = poly + b[i].tolist()*root
+			poly = poly + a[i].tolist()
+			
+			aCoeffs[i],bCoeffs[i],cCoeffs[i],dCoeffs[i]=poly.c
+		return aCoeffs[i],bCoeffs[i],cCoeffs[i],dCoeffs[i]
+
+
 
 
 
