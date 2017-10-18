@@ -708,7 +708,6 @@ def transformCubicCoeffiencets(a,b,c,d,xn):
 	bCoeffs=np.zeros(n)
 	cCoeffs=np.zeros(n)
 	dCoeffs=np.zeros(n)
-
 	if (np.size(a) != n) or (np.size(b) != n) or (np.size(c)-1 != n) or (np.size(d) != n): 
 		print 'Error: vector lengths do not match'
 		return 0,0,0,0
@@ -720,9 +719,13 @@ def transformCubicCoeffiencets(a,b,c,d,xn):
 			poly = poly + c[i].tolist()*(root)**2
 			poly = poly + b[i].tolist()*root
 			poly = poly + a[i].tolist()
-			
-			aCoeffs[i],bCoeffs[i],cCoeffs[i],dCoeffs[i]=poly.c
-		return aCoeffs[i],bCoeffs[i],cCoeffs[i],dCoeffs[i]
+
+			tempCoeffs=np.zeros(4)
+			tempCoeffs[(4-(poly.order+1)):]=poly.c
+
+			aCoeffs[i],bCoeffs[i],cCoeffs[i],dCoeffs[i]=tempCoeffs
+			#aCoeffs[i],bCoeffs[i],cCoeffs[i],dCoeffs[i]=poly.c
+		return aCoeffs,bCoeffs,cCoeffs,dCoeffs
 
 
 

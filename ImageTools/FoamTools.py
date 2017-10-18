@@ -29,16 +29,16 @@ def readPatchFile(workingDir,filename):
 	print 'finished reading'+filename
 	return patchArray
 
-def writeXYZtoPointsVectorField(workingDir,filename):
+def writeXYZtoPointsVectorField(workingDir,fileName,outFileName):
 	#script writes a xyz file to a FOAM point vector field
 	import numpy as np
 	print 'running writeXYZtoPointVectorField...'
 
 	#read in the xyz file
-	xyzPoints=np.loadtxt(workingDir+'/'+filename+'Displacement')
+	xyzPoints=np.loadtxt(workingDir+'/'+fileName)
 
 	#OpenFOAM file
-	fid=open(workingDir+'/'+filename+'PositionNew','w')
+	fid=open(workingDir+'/'+outFileName,'w')
 	#Write header information
 	fid.write('FoamFile\n')
 	fid.write('{\n')

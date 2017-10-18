@@ -21,7 +21,7 @@ print 'Running HostMeshMotility...'
 
 #Step one, create out contraction Matrix
 workingDir = './../imageToolsTestSpace/'
-workingDirOF = '/home/stephen/OpenFOAM/Simulations2/Rumens/RumenBMES'
+workingDirOF = '/home/stephen/OpenFOAM/Simulations2/Rumens/RumenSplineTest'
 
 #we will have a control file that has all of the contour groups we are planning to use
 activeContours=open(workingDir+'ContourList').readlines()
@@ -56,7 +56,7 @@ passivePoints=np.zeros((1,3))
 for patch in patchList:
 	currentIndex=currentIndex+np.shape(patch)[0]
 	index=index+[currentIndex]
-	passivePoints=np.vstack([passivePoints,np.asarray(patch)])[0::5]
+	passivePoints=np.vstack([passivePoints,np.asarray(patch)])
 
 print index
 
@@ -78,7 +78,7 @@ contractionMatrix,endtime=IT.createContractionMatrix(activeContours,contourInfor
 #lets make a nxm spatial array for the first time point, where n=(x,y,z) and m are the nodes
 cMshapeIM=np.shape(contractionMatrix)
 cMshape=[0]*4
-cMshape[0]=4
+cMshape[0]=cMshapeIM[0]
 cMshape[1]=cMshapeIM[1]
 cMshape[2]=cMshapeIM[2]
 cMshape[3]=cMshapeIM[3]
@@ -183,8 +183,10 @@ timeVector=range(cMshape[0])
 
 pos=0
 os.mkdir(workingDirOF+'/constant/patchDisplacements')
+os.mkdir(workingDirOF+'/constant/patchPositions')
 for i in range(len(patchNames)):
 	os.mkdir(workingDirOF+'/constant/patchDisplacements/'+str(patchNames[i]))
+	os.mkdir(workingDirOF+'/constant/patchPositions/'+str(patchNames[i]))
 	patchNodes=passiveList[pos:index[i],:,:]*scale
 	#So we will be making an a, b c and d vector files 
 	aCoefs=np.zeros((np.shape(patchNodes)[0],3,cMshape[0]))
@@ -196,7 +198,16 @@ for i in range(len(patchNames)):
 		for k in range(3): #number of dimensions
 			yn=patchNodes[j,k,:]
 			[a,b,c,d]=IT.basicCubicSpline(cMshape[0],timeVector,yn)
+			#print 'Original Coefs'
+			#print a,b,c,d
 			[a,b,c,d]=IT.transformCubicCoeffiencets(a,b,c,d,timeVector)
+			#[aCC,bCC,cCC,dCC]=IT.transformCubicCoeffiencets(a[:2],b[:2],c[:3],d[:2],timeVector[:2])
+			#print 'Transformed'
+			#print aC,bC,cC,dC
+			#print 'Transform from Original'
+			#print a[:2],b[:2],c[:3],d[:2],timeVector[:2]
+			#print aCC,bCC,cCC,dCC
+			#print Catsf
 			aCoefs[j,k,:]=a 
 			bCoefs[j,k,:]=b
 			cCoefs[j,k,:]=c
@@ -209,6 +220,8 @@ for i in range(len(patchNames)):
 		np.savetxt(workingDirOF+'/constant/patchDisplacements/'+str(patchNames[i])+'/'+str(k)+'/b',bCoefs[:,:,k])
 		np.savetxt(workingDirOF+'/constant/patchDisplacements/'+str(patchNames[i])+'/'+str(k)+'/c',cCoefs[:,:,k])
 		np.savetxt(workingDirOF+'/constant/patchDisplacements/'+str(patchNames[i])+'/'+str(k)+'/d',dCoefs[:,:,k])
+		os.mkdir(workingDirOF+'/constant/patchPositions/'+str(patchNames[i])+'/'+str(k))
+		np.savetxt(workingDirOF+'/constant/patchPositions/'+str(patchNames[i])+'/'+str(k)+'/patchDisplacements',patchNodes[:,:,k])
 	
 	#for j in range(cMshape[0]):
 	#	np.savetxt(workingDirOF+'/constant/patchDisplacements/'+patchNames[i]+str(timeVector[j]),patchNodes[:,:,j])
