@@ -62,7 +62,7 @@ for i in range(endtime):
 	for j in range(np.shape(contractionMatrix)[1]):
 		timePlot.plot(contractionMatrix[i][j][:,0],contractionMatrix[i][j][:,1],np.float(contourInformation[j][0]),'-or')
 
-	plt.pause(0.05)
+	plt.pause(0.2)
 
 plt.ioff()
 
