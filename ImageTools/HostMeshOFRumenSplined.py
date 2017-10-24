@@ -21,7 +21,10 @@ print 'Running HostMeshMotility...'
 
 #Step one, create out contraction Matrix
 workingDir = './../imageToolsTestSpace/'
-workingDirOF = '/home/stephen/OpenFOAM/Simulations2/Rumens/RumenSplineTest'
+workingDirOF = '/home/stephen/OpenFOAM/Simulations2/Rumens/SplineChecks/RumenSplineTestCheck10'
+
+#outfolder for hostmeshing details
+os.mkdir(workingDirOF+'/HMresults')
 
 #we will have a control file that has all of the contour groups we are planning to use
 activeContours=open(workingDir+'ContourList').readlines()
@@ -36,8 +39,8 @@ scale=0.001 #working in m in openFOAM, but HM is hardcoded for mm
 # fititng parameters for host mesh fitting
 host_mesh_pad = 10.0 # host mesh padding around slave points
 host_elem_type = 'quad333' # quadrilateral cubic host elements
-host_elems = [1,1,1] # a single element host mesh
-maxit = 10
+host_elems = [1,1,3] # a single element host mesh
+maxit = 100
 sobd = [4,4,4]
 sobw = 0.00001#1e-10
 xtol = 1e-12
@@ -127,6 +130,14 @@ passivePoints_passive = geometric_field.makeGeometricFieldEvaluatorSparse(
     							matPoints=passivePoints_xi,
                                 )
 
+# calc slave node xi in host
+print 'calculating slave xi...'
+slave_xi = host_mesh.find_closest_material_points(
+					source_points_fitting,
+					initGD=[100,100,100],
+					verbose=True,
+					)[0]
+
 #Loop through time points
 for timePoint in range(cMshape[0]):
 
@@ -163,6 +174,7 @@ for timePoint in range(cMshape[0]):
                 	host_mesh,
                 	source_points_fitting,
                 	slave_func,
+                	slave_xi=slave_xi,
                 	max_it=maxit,
                 	sob_d=sobd,
                 	sob_w=sobw,
@@ -175,11 +187,19 @@ for timePoint in range(cMshape[0]):
 
 	#put the passivePoints into a list
 	passiveList[:,:,timePoint]=passivePoints_hmf
+	#we are also going to save host mesh data
+	os.mkdir(workingDirOF+'/HMresults/'+str(timePoint+1))
+	np.savetxt(workingDirOF+'/HMresults/'+str(timePoint+1)+'/target_points',target_points)
+	np.savetxt(workingDirOF+'/HMresults/'+str(timePoint+1)+'/source_points_fitting',source_points_fitting)
+	np.savetxt(workingDirOF+'/HMresults/'+str(timePoint+1)+'/source_points_fitting_hmf',source_points_fitting_hmf)
+	np.savetxt(workingDirOF+'/HMresults/'+str(timePoint+1)+'/HostMeshOrig',HostMeshOrig[:,:,0].T)
+	np.savetxt(workingDirOF+'/HMresults/'+str(timePoint+1)+'/HostMeshDeform',host_x_opt[:,:,0].T)
 
 #=============================================================#
 #Export the spine coefficients
+passiveList=np.insert(passiveList,0,passivePoints,axis=2)
 #Set up a time array (xn for splining)
-timeVector=range(cMshape[0])
+timeVector=range(cMshape[0]+1)
 
 pos=0
 os.mkdir(workingDirOF+'/constant/patchDisplacements')
@@ -189,18 +209,18 @@ for i in range(len(patchNames)):
 	os.mkdir(workingDirOF+'/constant/patchPositions/'+str(patchNames[i]))
 	patchNodes=passiveList[pos:index[i],:,:]*scale
 	#So we will be making an a, b c and d vector files 
-	aCoefs=np.zeros((np.shape(patchNodes)[0],3,cMshape[0]))
-	bCoefs=np.zeros((np.shape(patchNodes)[0],3,cMshape[0]))
-	cCoefs=np.zeros((np.shape(patchNodes)[0],3,cMshape[0]))
-	dCoefs=np.zeros((np.shape(patchNodes)[0],3,cMshape[0]))
+	aCoefs=np.zeros((np.shape(patchNodes)[0],3,cMshape[0]+1))
+	bCoefs=np.zeros((np.shape(patchNodes)[0],3,cMshape[0]+1))
+	cCoefs=np.zeros((np.shape(patchNodes)[0],3,cMshape[0]+1))
+	dCoefs=np.zeros((np.shape(patchNodes)[0],3,cMshape[0]+1))
 	#Loop through the number of nodes, and calculate the spines for x, y and z
+	print 'Splining patch:', patchNames[i]
 	for j in range(np.shape(patchNodes)[0]):
 		for k in range(3): #number of dimensions
 			yn=patchNodes[j,k,:]
-			[a,b,c,d]=IT.basicCubicSpline(cMshape[0],timeVector,yn)
-			#print 'Original Coefs'
-			#print a,b,c,d
-			[a,b,c,d]=IT.transformCubicCoeffiencets(a,b,c,d,timeVector)
+			#[a,b,c,d]=IT.basicCubicSpline(cMshape[0]+1,timeVector,yn)		
+			#[a,b,c,d]=IT.transformCubicCoeffiencets(a,b,c,d,timeVector)
+			
 			#[aCC,bCC,cCC,dCC]=IT.transformCubicCoeffiencets(a[:2],b[:2],c[:3],d[:2],timeVector[:2])
 			#print 'Transformed'
 			#print aC,bC,cC,dC
@@ -208,13 +228,15 @@ for i in range(len(patchNames)):
 			#print a[:2],b[:2],c[:3],d[:2],timeVector[:2]
 			#print aCC,bCC,cCC,dCC
 			#print Catsf
-			aCoefs[j,k,:]=a 
-			bCoefs[j,k,:]=b
-			cCoefs[j,k,:]=c
-			dCoefs[j,k,:]=d
+
+			#aCoefs[j,k,:]=a 
+			#bCoefs[j,k,:]=b
+			#cCoefs[j,k,:]=c
+			#dCoefs[j,k,:]=d
 		
 	#ones we have filled the vectors, we write them to the time files
-	for k in range(cMshape[0]):
+	print 'saving time files...', patchNames[i]
+	for k in range(cMshape[0]+1):
 		os.mkdir(workingDirOF+'/constant/patchDisplacements/'+str(patchNames[i])+'/'+str(k))
 		np.savetxt(workingDirOF+'/constant/patchDisplacements/'+str(patchNames[i])+'/'+str(k)+'/a',aCoefs[:,:,k])
 		np.savetxt(workingDirOF+'/constant/patchDisplacements/'+str(patchNames[i])+'/'+str(k)+'/b',bCoefs[:,:,k])
@@ -222,7 +244,10 @@ for i in range(len(patchNames)):
 		np.savetxt(workingDirOF+'/constant/patchDisplacements/'+str(patchNames[i])+'/'+str(k)+'/d',dCoefs[:,:,k])
 		os.mkdir(workingDirOF+'/constant/patchPositions/'+str(patchNames[i])+'/'+str(k))
 		np.savetxt(workingDirOF+'/constant/patchPositions/'+str(patchNames[i])+'/'+str(k)+'/patchDisplacements',patchNodes[:,:,k])
-	
+
+
+		
+
 	#for j in range(cMshape[0]):
 	#	np.savetxt(workingDirOF+'/constant/patchDisplacements/'+patchNames[i]+str(timeVector[j]),patchNodes[:,:,j])
 

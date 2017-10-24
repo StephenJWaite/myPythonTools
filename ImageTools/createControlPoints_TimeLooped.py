@@ -14,12 +14,18 @@ plt.switch_backend('TkAgg')
 print 'Running createControlPoints'
 
 #Set up working directories
-workingDir = './../imageToolsTestSpace/6948_04/'
-imageDir = './../imageToolsTestSpace/6948_04/Images/'
-contourDir = './../imageToolsTestSpace/6948_04/'
+fileName='4173b_02'
+contraction='Contraction1'
+region=''
+
+workingDir = '/home/stephen/Documents/PhD/Data/Motility/SortedByLocation/Reticulum/'+fileName+'/'
+imageDir = '/home/stephen/Documents/PhD/Data/Motility/SortedByLocation/Reticulum/'+fileName+'/Slices/'+contraction+'/'
+contourDir = '/home/stephen/Documents/PhD/Data/Motility/SortedByLocation/Reticulum/'+fileName+'/'
+
+
 
 #Read in input files
-contourData = np.loadtxt(contourDir + 'Contours.txt')
+contourData = np.loadtxt(contourDir + contraction+region)
 print '    input contour size:', np.shape(contourData)
 #Sort the contour data
 sortedContours=IT.sortContourData(contourData)
@@ -98,7 +104,7 @@ plt.show()
 #Write outfile
 #Set the z position
 #Set the total time (number of contours)
-with file(workingDir+'Results.txt','w') as outfile:
+with file(workingDir+fileName+'_'+contraction+region,'w') as outfile:
     outfile.write('#Z position: {0}\n'.format(5))
     outfile.write('#Contraction length: {0}\n'.format(np.shape(sortedContours)[0]))
     for i in range(np.shape(sortedContours)[0]):

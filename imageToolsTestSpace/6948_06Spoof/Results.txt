@@ -1,4 +1,4 @@
-#Z position: -440
+#Z position: -390
 #Contraction length: 9
 #Contour: 0 Centroid: [224.206078519,322.64665895] Centroid Size: 356.35007685 Area: 10841.9860698
 1.873585866952577135e+02 2.598325721834543174e+02
