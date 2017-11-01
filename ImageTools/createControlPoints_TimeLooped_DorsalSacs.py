@@ -14,10 +14,10 @@ plt.switch_backend('TkAgg')
 print 'Running createControlPoints'
 
 #Set up working directories
-location='Reticulum'
-fileName='4173b_02'
-contraction='Contraction1'
-region=''
+location='BlindSacs'
+fileName='6905a_02'
+contraction='Contraction2'
+region='Dorsal'
 
 workingDir = '/home/stephen/Documents/PhD/Data/Motility/SortedByLocation/'+location+'/'+fileName+'/'
 imageDir = '/home/stephen/Documents/PhD/Data/Motility/SortedByLocation/'+location+'/'+fileName+'/Slices/'+contraction+'/'
@@ -31,7 +31,6 @@ print '    input contour size:', np.shape(contourData)
 #Sort the contour data
 sortedContours=IT.sortContourData(contourData)
 ControlPointsArray=[0]*np.shape(sortedContours)[0]
-#print sortedContours[-1]
 
 basePlot = plt.figure()
 
@@ -47,6 +46,7 @@ seedNumber=35#8
 #Begin loop
 for imLoop in range(np.shape(sortedContours)[0]):
     targetContour=sortedContours[imLoop]
+
     ax = basePlot.add_subplot(111)
     imageFile = mpimg.imread(imageDir + str(imLoop) +'.png')
     print '    input Image size:', np.shape(imageFile)
@@ -56,47 +56,52 @@ for imLoop in range(np.shape(sortedContours)[0]):
     #print '\ttargetContour.shape:',np.shape(targetContour)
     #targetContour=targetContour[0::5]
     #print '\tsubsampled targetContour.shape:',np.shape(targetContour)
-    #print 'Doing contour:',imLoop
-    #print np.shape(sortedContours)
-    #print targetContour
-    ax.plot(targetContour[:,0],targetContour[:,1],'-xr')
-    print targetContour
-    ax.axis('equal')
 
-    #Create a blank array for master points
-    MPoints=np.zeros((MCP,3))
+    print np.size(targetContour), targetContour
+    if np.size(targetContour)==1:
+        print 'BLARP'
+        ControlPointsArray[imLoop]=targetContour
 
-    #For the user specified number of master points, loop through and select.
-    for i in range(MCP):
-        #Get the user input
-        userPosition=plt.ginput(1)
-        MPoints[i,:2]= np.asarray(userPosition)
-        ax.scatter(MPoints[i,0],MPoints[i,1], facecolors='g', edgecolors='g')
-        MPoints[i,:2],index = IT.snapSphere(targetContour,MPoints[i,:],sR)
-        #insert the new points into the contour array
-        #targetContour=np.concatenate((targetContour[:index+1,:],np.asarray([xPt,yPt]).reshape(1,2),targetContour[index+1:,:]))
-        targetContour=np.concatenate((targetContour[:index+1,:],MPoints[i,:2].reshape(1,2),targetContour[index+1:,:]))
-        MPoints[i,2]=index+1
-        #dirty shift fix, should recode this whole section to first determine
-        #where the M points should all go, and then place them in order after
-        #wards, but since num MP is low, its not gonna slow stuff down.
-        for j in range(i):
-            if MPoints[i,2]<MPoints[j,2]:
-                MPoints[j,2]=MPoints[j,2]+1
+    else:
+        ax.plot(targetContour[:,0],targetContour[:,1],'-xr')
+        ax.axis('equal')
 
-        ax.scatter(MPoints[i,0],MPoints[i,1], facecolors='y', edgecolors='y')
+        #Create a blank array for master points
+        MPoints=np.zeros((MCP,3))
 
-    #Seed the slave control points between the masters with equidistance spacing.
-    print 'Master Points\n',MPoints
-    distVector=IT.calculateDistanceVector(targetContour,MPoints)
-    print 'Dist Vector\n',distVector
+       #For the user specified number of master points, loop through and select.
+        for i in range(MCP):
+            #Get the user input
+            userPosition=plt.ginput(1)
+            MPoints[i,:2]= np.asarray(userPosition)
+            ax.scatter(MPoints[i,0],MPoints[i,1], facecolors='g', edgecolors='g')
+            MPoints[i,:2],index = IT.snapSphere(targetContour,MPoints[i,:],sR)
+            #insert the new points into the contour array
+            #targetContour=np.concatenate((targetContour[:index+1,:],np.asarray([xPt,yPt]).reshape(1,2),targetContour[index+1:,:]))
+            targetContour=np.concatenate((targetContour[:index+1,:],MPoints[i,:2].reshape(1,2),targetContour[index+1:,:]))
+            MPoints[i,2]=index+1
+            #dirty shift fix, should recode this whole section to first determine
+            #where the M points should all go, and then place them in order after
+            #wards, but since num MP is low, its not gonna slow stuff down.
+            for j in range(i):
+                if MPoints[i,2]<MPoints[j,2]:
+                    MPoints[j,2]=MPoints[j,2]+1
 
-    controlPoints=IT.seedSlavePoints(distVector,targetContour,MPoints,seedNumber,ax)
-    ax.plot(controlPoints[:,0],controlPoints[:,1],'ob')
+            ax.scatter(MPoints[i,0],MPoints[i,1], facecolors='y', edgecolors='y')
+
+        #Seed the slave control points between the masters with equidistance spacing.
+        print 'Master Points\n',MPoints
+        distVector=IT.calculateDistanceVector(targetContour,MPoints)
+        print 'Dist Vector\n',distVector
+
+        controlPoints=IT.seedSlavePoints(distVector,targetContour,MPoints,seedNumber,ax)
+        ax.plot(controlPoints[:,0],controlPoints[:,1],'ob')
+        ControlPointsArray[imLoop]=controlPoints
+    
     plt.draw()
-    time.sleep(0.2)
+    time.sleep(0.5)
     basePlot.clf()
-    ControlPointsArray[imLoop]=controlPoints
+    
 
 #Lets now look in 3D
 #fig2=plt.figure(2)
@@ -113,14 +118,25 @@ with file(workingDir+fileName+'_'+contraction+region,'w') as outfile:
     outfile.write('#Z position: {0}\n'.format(5))
     outfile.write('#Contraction length: {0}\n'.format(np.shape(sortedContours)[0]))
     for i in range(np.shape(sortedContours)[0]):
-        cX,cY=IT.calculateCentroidPosition(ControlPointsArray[i][:,0],ControlPointsArray[i][:,1])
-        print 'Centroid pos', cX,cY
-        CS=IT.calculateCentroidSize(ControlPointsArray[i][:,0],ControlPointsArray[i][:,1])
-        print 'Centroid Size', CS
-        Area=IT.calculateClosedContourArea(ControlPointsArray[i][:,0],ControlPointsArray[i][:,1])
-        print 'Area:', Area
-        outfile.write('#Contour: {0} Centroid: [{1},{2}] Centroid Size: {3} Area: {4}\n'.format(i,cX,cY,CS,Area))
-        np.savetxt(outfile,ControlPointsArray[i])
+
+        if np.size(ControlPointsArray[i])==1:
+            print 'RARP'
+            cX=cY=0
+            print 'Centroid pos', cX,cY
+            CS=0
+            print 'Centroid Size', CS
+            Area=0
+            print 'Area:', Area
+            outfile.write('#Contour: {0} Centroid: [{1},{2}] Centroid Size: {3} Area: {4}\n'.format(i,cX,cY,CS,Area))
+        else:
+            cX,cY=IT.calculateCentroidPosition(ControlPointsArray[i][:,0],ControlPointsArray[i][:,1])
+            print 'Centroid pos', cX,cY
+            CS=IT.calculateCentroidSize(ControlPointsArray[i][:,0],ControlPointsArray[i][:,1])
+            print 'Centroid Size', CS
+            Area=IT.calculateClosedContourArea(ControlPointsArray[i][:,0],ControlPointsArray[i][:,1])
+            print 'Area:', Area
+            outfile.write('#Contour: {0} Centroid: [{1},{2}] Centroid Size: {3} Area: {4}\n'.format(i,cX,cY,CS,Area))
+            np.savetxt(outfile,ControlPointsArray[i])
 
 #with file(workingDir+'Results.txt','w') as outfile:
 	#outfile.write('#Z position: {0}\n'.format(5))

@@ -3,7 +3,7 @@ import FoamTools as FT
 #workingDir='/home/stephen/OpenFOAM/Simulations2/Rumens/RumenSplineTest/constant/manualSplineTests/'
 #workingDir='/home/stephen/OpenFOAM/Simulations2/Rumens/RumenSplineTest/constant/patchPositions/'
 #workingDir='/home/stephen/OpenFOAM/Simulations2/Rumens/SplineChecks/RumenSplineTestCheck3/constant/patchDisplacements/'
-workingDir='/home/stephen/OpenFOAM/Simulations2/Rumens/SplineChecks/RumenSplineTestCheck7/constant/patchDisplacements/'
+workingDir='/home/stephen/OpenFOAM/Simulations2/Rumens/SplineChecks/RumenSplineTestCheck10/constant/patchDisplacements/'
 
 #FT.writeXYZtoPointsVectorField(workingDir+'inlet/patchDisplacement/1','patchDisplacement','inletPositionNew')
 #FT.writeXYZtoPointsVectorField(workingDir+'wall/1','patchDisplacements','wallPositionNew')

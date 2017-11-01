@@ -21,7 +21,7 @@ print 'Running HostMeshMotility...'
 
 #Step one, create out contraction Matrix
 workingDir = './../imageToolsTestSpace/'
-workingDirOF = '/home/stephen/OpenFOAM/Simulations2/Rumens/SplineChecks/RumenSplineTestCheck11'
+workingDirOF = '/home/stephen/OpenFOAM/Simulations2/Rumens/SplineChecks/ParallelTests/ParallelSplineCheck3/'
 
 #outfolder for hostmeshing details
 os.mkdir(workingDirOF+'/HMresults')
@@ -31,6 +31,9 @@ activeContours=open(workingDir+'ContourList').readlines()
 
 #read in the contraction map
 CMap=np.loadtxt(workingDir+'contractionMap')
+
+#Set the number of processors
+numProc=20
 
 #Define the patch names
 patchNames=['inlet','wall']
@@ -46,20 +49,32 @@ sobw = 0.000001#1e-10 #for quad444, 0.000005 is a good start, then crank
 xtol = 1e-12
 
 #===========================Static File IO==============================#
-#Read in patch files, and form the passive node array.
-#load in the OF patches
-patchList=[0]*len(patchNames)
-for i in range(len(patchNames)):
-	patchList[i]=FT.readPatchFile(workingDirOF+'/constant/',patchNames[i]+'PatchNodes')
+#set up a blank list that will store each group of patch nodes
+#Loop through each processor, read the points and we assign them to a concated np array.
+#we will store their index so we can seperate them laters
+patchList=[0]*(numProc*len(patchNames))
+print np.size(patchList)
+for i in range(numProc):
+	print '---Storing patches for processor',i,'---'
+	for j in range(len(patchNames)):
+		print j,((i*len(patchNames))+j)
+		patchList[(i*len(patchNames))+j]=FT.readPatchFile(workingDirOF+'processor'+str(i)+'/constant/',patchNames[j]+'PatchNodes')
 
+#Now loop through all the patchList, and smoosh it all into one np array, and store the start point of each patch.
 index=[]
 currentIndex=0
 print np.shape(patchList)
 passivePoints=np.zeros((1,3))
 for patch in patchList:
-	currentIndex=currentIndex+np.shape(patch)[0]
-	index=index+[currentIndex]
-	passivePoints=np.vstack([passivePoints,np.asarray(patch)])
+	print np.shape(patch)
+	#check if the patch isnt in a given processor.
+	if len(patch)==0:
+		print 'empty patch'
+		index=index+[-1]
+	else:
+		currentIndex=currentIndex+np.shape(patch)[0]
+		index=index+[currentIndex]
+		passivePoints=np.vstack([passivePoints,np.asarray(patch)])
 
 print index
 
@@ -202,56 +217,73 @@ passiveList=np.insert(passiveList,0,passivePoints,axis=2)
 timeVector=range(cMshape[0]+1)
 
 pos=0
-os.mkdir(workingDirOF+'/constant/patchDisplacements')
-os.mkdir(workingDirOF+'/constant/patchPositions')
-for i in range(len(patchNames)):
-	os.mkdir(workingDirOF+'/constant/patchDisplacements/'+str(patchNames[i]))
-	os.mkdir(workingDirOF+'/constant/patchPositions/'+str(patchNames[i]))
-	patchNodes=passiveList[pos:index[i],:,:]*scale
-	#So we will be making an a, b c and d vector files 
-	aCoefs=np.zeros((np.shape(patchNodes)[0],3,cMshape[0]+1))
-	bCoefs=np.zeros((np.shape(patchNodes)[0],3,cMshape[0]+1))
-	cCoefs=np.zeros((np.shape(patchNodes)[0],3,cMshape[0]+1))
-	dCoefs=np.zeros((np.shape(patchNodes)[0],3,cMshape[0]+1))
-	#Loop through the number of nodes, and calculate the spines for x, y and z
-	print 'Splining patch:', patchNames[i]
-	for j in range(np.shape(patchNodes)[0]):
-		for k in range(3): #number of dimensions
-			yn=patchNodes[j,k,:]
-			#[a,b,c,d]=IT.basicCubicSpline(cMshape[0]+1,timeVector,yn)		
-			#[a,b,c,d]=IT.transformCubicCoeffiencets(a,b,c,d,timeVector)
+
+for p in range(numProc):
+	os.mkdir(workingDirOF+'processor'+str(p)+'/constant/patchDisplacements')
+	os.mkdir(workingDirOF+'processor'+str(p)+'/constant/patchPositions')
+
+	for i in range(len(patchNames)):
+		print 'setting up file directories...'
+		os.mkdir(workingDirOF+'processor'+str(p)+'/constant/patchDisplacements/'+str(patchNames[i]))
+		os.mkdir(workingDirOF+'processor'+str(p)+'/constant/patchPositions/'+str(patchNames[i]))
+		for k in range(cMshape[0]+1):
+			os.mkdir(workingDirOF+'processor'+str(p)+'/constant/patchDisplacements/'+str(patchNames[i])+'/'+str(k))
+			os.mkdir(workingDirOF+'processor'+str(p)+'/constant/patchPositions/'+str(patchNames[i])+'/'+str(k))
+
+		if index[(p*len(patchNames))+i]!=-1:
+			print 'creating spline files for'+patchNames[i]+'on proc'+str(p)
+			patchNodes=passiveList[pos:index[(p*len(patchNames))+i],:,:]*scale
+			#pos:index[(p*len(patchNames))+i]
+		
+			#So we will be making an a, b c and d vector files 
+			aCoefs=np.zeros((np.shape(patchNodes)[0],3,cMshape[0]+1))
+			bCoefs=np.zeros((np.shape(patchNodes)[0],3,cMshape[0]+1))
+			cCoefs=np.zeros((np.shape(patchNodes)[0],3,cMshape[0]+1))
+			dCoefs=np.zeros((np.shape(patchNodes)[0],3,cMshape[0]+1))
+			#Loop through the number of nodes, and calculate the spines for x, y and z
+			print 'Splining patch:', patchNames[i]
+			for j in range(np.shape(patchNodes)[0]):
+				for k in range(3): #number of dimensions
+					yn=patchNodes[j,k,:]
+					[a,b,c,d]=IT.basicCubicSpline(cMshape[0]+1,timeVector,yn)		
+					[a,b,c,d]=IT.transformCubicCoeffiencets(a,b,c,d,timeVector)
 			
-			#[aCC,bCC,cCC,dCC]=IT.transformCubicCoeffiencets(a[:2],b[:2],c[:3],d[:2],timeVector[:2])
-			#print 'Transformed'
-			#print aC,bC,cC,dC
-			#print 'Transform from Original'
-			#print a[:2],b[:2],c[:3],d[:2],timeVector[:2]
-			#print aCC,bCC,cCC,dCC
-			#print Catsf
-
-			#aCoefs[j,k,:]=a 
-			#bCoefs[j,k,:]=b
-			#cCoefs[j,k,:]=c
-			#dCoefs[j,k,:]=d
+					aCoefs[j,k,:]=a 
+					bCoefs[j,k,:]=b
+					cCoefs[j,k,:]=c
+					dCoefs[j,k,:]=d
 		
-	#ones we have filled the vectors, we write them to the time files
-	print 'saving time files...', patchNames[i]
-	for k in range(cMshape[0]+1):
-		os.mkdir(workingDirOF+'/constant/patchDisplacements/'+str(patchNames[i])+'/'+str(k))
-		np.savetxt(workingDirOF+'/constant/patchDisplacements/'+str(patchNames[i])+'/'+str(k)+'/a',aCoefs[:,:,k])
-		np.savetxt(workingDirOF+'/constant/patchDisplacements/'+str(patchNames[i])+'/'+str(k)+'/b',bCoefs[:,:,k])
-		np.savetxt(workingDirOF+'/constant/patchDisplacements/'+str(patchNames[i])+'/'+str(k)+'/c',cCoefs[:,:,k])
-		np.savetxt(workingDirOF+'/constant/patchDisplacements/'+str(patchNames[i])+'/'+str(k)+'/d',dCoefs[:,:,k])
-		os.mkdir(workingDirOF+'/constant/patchPositions/'+str(patchNames[i])+'/'+str(k))
-		np.savetxt(workingDirOF+'/constant/patchPositions/'+str(patchNames[i])+'/'+str(k)+'/patchDisplacements',patchNodes[:,:,k])
+			#once we have filled the vectors, we write them to the time files
+			print 'saving time files...', patchNames[i]
+			#for time 0, we need our OF vector files
+			np.savetxt(workingDirOF+'processor'+str(p)+'/constant/patchPositions/'+str(patchNames[i])+'/'+str(0)+'/patchDisplacements',patchNodes[:,:,0])
+			FT.writeVectorField(workingDirOF+'processor'+str(p)+'/constant/patchDisplacements/'+str(patchNames[i])+'/'+str(0)+'/'+str(patchNames[i])+'A',aCoefs[:,:,0])
+			FT.writeVectorField(workingDirOF+'processor'+str(p)+'/constant/patchDisplacements/'+str(patchNames[i])+'/'+str(0)+'/'+str(patchNames[i])+'B',bCoefs[:,:,0])
+			FT.writeVectorField(workingDirOF+'processor'+str(p)+'/constant/patchDisplacements/'+str(patchNames[i])+'/'+str(0)+'/'+str(patchNames[i])+'C',cCoefs[:,:,0])
+			FT.writeVectorField(workingDirOF+'processor'+str(p)+'/constant/patchDisplacements/'+str(patchNames[i])+'/'+str(0)+'/'+str(patchNames[i])+'D',dCoefs[:,:,0])
 
+			for k in range(1,cMshape[0]+1):
+				np.savetxt(workingDirOF+'processor'+str(p)+'/constant/patchDisplacements/'+str(patchNames[i])+'/'+str(k)+'/a',aCoefs[:,:,k])
+				np.savetxt(workingDirOF+'processor'+str(p)+'/constant/patchDisplacements/'+str(patchNames[i])+'/'+str(k)+'/b',bCoefs[:,:,k])
+				np.savetxt(workingDirOF+'processor'+str(p)+'/constant/patchDisplacements/'+str(patchNames[i])+'/'+str(k)+'/c',cCoefs[:,:,k])
+				np.savetxt(workingDirOF+'processor'+str(p)+'/constant/patchDisplacements/'+str(patchNames[i])+'/'+str(k)+'/d',dCoefs[:,:,k])
+				np.savetxt(workingDirOF+'processor'+str(p)+'/constant/patchPositions/'+str(patchNames[i])+'/'+str(k)+'/patchDisplacements',patchNodes[:,:,k])
 
-		
+			pos=index[(p*len(patchNames))+i]
+		else:
+			#just print a zero
+			print 'printing a zero field'
+			FT.createBlankVectorField(workingDirOF+'processor'+str(p)+'/constant/patchPositions/'+str(patchNames[i])+'/'+str(0),'patchDisplacementsVector')
+			FT.createBlankVectorField(workingDirOF+'processor'+str(p)+'/constant/patchDisplacements/'+str(patchNames[i])+'/'+str(0),str(patchNames[i])+'A')
+			FT.createBlankVectorField(workingDirOF+'processor'+str(p)+'/constant/patchDisplacements/'+str(patchNames[i])+'/'+str(0),str(patchNames[i])+'B')
+			FT.createBlankVectorField(workingDirOF+'processor'+str(p)+'/constant/patchDisplacements/'+str(patchNames[i])+'/'+str(0),str(patchNames[i])+'C')
+			FT.createBlankVectorField(workingDirOF+'processor'+str(p)+'/constant/patchDisplacements/'+str(patchNames[i])+'/'+str(0),str(patchNames[i])+'D')
 
-	#for j in range(cMshape[0]):
-	#	np.savetxt(workingDirOF+'/constant/patchDisplacements/'+patchNames[i]+str(timeVector[j]),patchNodes[:,:,j])
-
-	pos=index[i]
+			for k in range(1,cMshape[0]+1):
+				FT.spoofEmptyDisplacementFile(workingDirOF+'processor'+str(p)+'/constant/patchDisplacements/'+str(patchNames[i])+'/'+str(k)+'/a')
+				FT.spoofEmptyDisplacementFile(workingDirOF+'processor'+str(p)+'/constant/patchDisplacements/'+str(patchNames[i])+'/'+str(k)+'/b')
+				FT.spoofEmptyDisplacementFile(workingDirOF+'processor'+str(p)+'/constant/patchDisplacements/'+str(patchNames[i])+'/'+str(k)+'/c')
+				FT.spoofEmptyDisplacementFile(workingDirOF+'processor'+str(p)+'/constant/patchDisplacements/'+str(patchNames[i])+'/'+str(k)+'/d')
 
 	
 IT.basicCubicSplinePlot(a,b.tolist(),c.tolist(),d.tolist(),timeVector)

@@ -5,9 +5,23 @@ from mayavi.core.pipeline_base import PipelineBase
 from mayavi.core.ui.api import SceneEditor, MlabSceneModel, MayaviScene
 import numpy as np
 
-workingDir='/home/stephen/OpenFOAM/Simulations2/Rumens/SplineChecks/RumenSplineTestCheck11'
+print 'RUnning visualiseHostMeshDeformationParallel...'
+
+workingDir='/home/stephen/OpenFOAM/Simulations2/Rumens/SplineChecks/ParallelTests/ParallelSplineCheck2'
 patchName='wall'
-pointTemp=np.loadtxt(workingDir+'/constant/patchPositions/' + patchName + '/' + str(0)  + '/patchDisplacements')[::10]*1000
+numProc=20 
+
+#pointTemp=np.loadtxt(workingDir+'/constant/patchPositions/' + patchName + '/' + str(0)  + '/patchDisplacements')[::10]*1000
+pointTemp=np.zeros((1,3))
+for i in range(numProc):
+	#read in the patch file from each processor and smoosh them togeather
+	temp=np.loadtxt(workingDir+'/processor'+str(i)+'/constant/patchPositions/' + patchName + '/' + str(0)  + '/patchDisplacements')
+	pointTemp=np.vstack([pointTemp,np.asarray(temp)])
+
+pointTemp=np.delete(pointTemp,(0),0)[::20]*1000
+print np.shape(pointTemp)
+
+
 sourceTemp=np.loadtxt(workingDir+'/HMresults/'+ str(1) + '/source_points_fitting_hmf')
 targetTemp=np.loadtxt(workingDir+'/HMresults/'+ str(1) + '/target_points')
 HMOTemp=np.loadtxt(workingDir+'/HMresults/'+ str(1) + '/HostMeshOrig')
@@ -21,11 +35,25 @@ targetData=np.zeros((targetTemp.shape[0],targetTemp.shape[1],numT))
 HMOData=np.zeros((HMOTemp.shape[0],HMOTemp.shape[1],numT))
 HMDData=np.zeros((HMDTemp.shape[0],HMDTemp.shape[1],numT))
 for i in range(numT):
-	pointData[:,:,i]=np.loadtxt(workingDir+'/constant/patchPositions/' + patchName + '/' + str(i+1)  + '/patchDisplacements')[::10]*1000
+	print 'loading time:', i
+	#pointData[:,:,i]=np.loadtxt(workingDir+'/constant/patchPositions/' + patchName + '/' + str(i+1)  + '/patchDisplacements')[::10]*1000
 	sourceData[:,:,i]=np.loadtxt(workingDir+'/HMresults/'+ str(i+1) + '/source_points_fitting_hmf')
 	targetData[:,:,i]=np.loadtxt(workingDir+'/HMresults/'+ str(i+1) + '/target_points')
 	HMOData[:,:,i]=np.loadtxt(workingDir+'/HMresults/'+ str(i+1) + '/HostMeshOrig')
 	HMDData[:,:,i]=np.loadtxt(workingDir+'/HMresults/'+ str(i+1) + '/HostMeshDeform')
+
+	#now we do the pointNodes
+	pointTemp=np.zeros((1,3))
+	for t in range(numProc):
+		#read in the patch file from each processor and smoosh them togeather
+		temp=np.loadtxt(workingDir+'/processor'+str(t)+'/constant/patchPositions/' + patchName + '/' + str(i)  + '/patchDisplacements')
+		pointTemp=np.vstack([pointTemp,np.asarray(temp)])
+
+	print 'check'
+	print np.shape(np.delete(pointTemp,(0),0))
+	print np.shape(pointData)
+	FUCK=np.delete(pointTemp,(0),0)
+	pointData[:,:,i]=FUCK[::20]*1000
 
 
 class TestModel(HasTraits):

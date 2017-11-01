@@ -57,11 +57,40 @@ def writeXYZtoPointsVectorField(workingDir,fileName,outFileName):
 
 	fid.write(')')
 
+def writeVectorField(workingDir,vectorField):
+	print 'running writeVectorField...'
+	#OpenFOAM file
+	fid=open(workingDir,'w')
+	#Write header information
+	fid.write('FoamFile\n')
+	fid.write('{\n')
+	fid.write('    version    2.0;\n')
+	fid.write('    format     ascii;\n')
+	fid.write('    class      vectorField;\n')
+	fid.write('    location   "constant";\n')
+	fid.write('    object     surfacePosition;\n')
+	fid.write('}\n\n\n')
+	#write the number of points
+	fid.write('{0}\n'.format(vectorField.shape[0]))
+	fid.write('(\n')
+	for point in vectorField:
+		temp=str(point).strip(' [] ')	
+		fid.write('('+temp+')\n')
+
+	fid.write(')')
+
+def spoofEmptyDisplacementFile(workingDir):
+	print 'running spoofEmptyDisplacementFile <- someones get paralled ^^'
+	fid=open(workingDir,'w')
+	fid.write('{0}'.format(0))
+	fid.close()
+
+
 def createBlankVectorField(workingDir,filename):
 	print 'running createBlankVectirField'
 
 	#OpenFOAM file
-	fid=open(workingDir+'/'+filename+'PositionNew','w')
+	fid=open(workingDir+'/'+filename,'w')
 	#Write header information
 	fid.write('FoamFile\n')
 	fid.write('{\n')

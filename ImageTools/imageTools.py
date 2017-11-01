@@ -337,13 +337,19 @@ def snapSphere(contourData,point,sR):
 def sortContourData(contourData):
 	print 'Running sortContourData'
 	#loop throught the data set and determine how many contours there are
-	count=0
-	for i in range(len(contourData)-1):
-		if contourData[i,2] != contourData[i+1,2]:
-			count=count+1
+	
+	#Old code block
+	#count=0
+	#for i in range(len(contourData)-1):
+	#	if contourData[i,2] != contourData[i+1,2]:
+	#		count=count+1
+
+	#print count
+	#print int(contourData[-1,2])
+	count = int(contourData[-1,2]-contourData[0,2]+1) #this is silly cause my images start from 0, but my contours start from 1.
 
 	#set up a blank list
-	contours=[1]*count
+	contours=[0]*count
 	print '\tNumber of contours:',count
 	#set a counter that will count the number of points in a contour
 	count=0
@@ -362,10 +368,20 @@ def sortContourData(contourData):
 		if contourData[i,2]==index:
 			count=count+1
 		else:
-			#print 'Contour Number:',index,'Contour Size:',np.shape(contourData[(i-count):i,0:2]),'i:',i,'count',count,'i-count',(i-count)
+			print 'Contour Number:',index,'Contour Size:',np.shape(contourData[(i-count):i,0:2]),'i:',i,'count',count,'i-count',(i-count)
 			contours[index]=contourData[(i-count):i,0:2]
+			print contourData[(i-count):i,0:2]
 			toggle=True
 			count=1
+
+	#you have written some really class A shit code here Stephen, this is gawd aweful, but you 
+	#have 4 months left, so we will just role with it, tack on the final index position after
+	#loop
+	print 'Contour Number:',index,'Contour Size:',np.shape(contourData[(i-count):i,0:2]),'i:',i,'count',count,'i-count',(i-count)
+	contours[index]=contourData[(i-count+1):,0:2] #im tired, Im not sure why the plus one is required, basic indexing but meh it works
+	print contourData[(i-count+1):,0:2] 
+	print contourData[-1,:]
+	print contourData[i,:]
 
 	return contours
 
@@ -396,12 +412,24 @@ def seedSlavePoints(distVector,contourData,MasterPoints,seedNumber,ax):
 		#print 'DistVector',distVector[i],'seedNumber',seedNumber-1,'MasterNumber',len(MasterPoints),'segSize',segSize
 		#Initislise vaiables and arrays using the current control point (which is the master point for this segment)
 		Dist=MDist=nodeCount=0
-		print '\nMpoint:',MasterPoints[i,2],'CPpos:',CPpos,'CNP:',CNP
+		#print '\nMpoint:',MasterPoints[i,2],'CPpos:',CPpos,'CNP:',CNP
 		ControlPoints[CPpos,:]=MasterPoints[i,:2]
 		#increment to the first slave point
 		CPpos=CPpos+1
 		#looping through data points, while the the current node is not the next master point
-		while CNP!=MasterPoints[i+1,2]:
+
+		#So I wrote a forwards marching alogrythem CNPi -> CNPi+1 that starts at a point and ends and the same point. this is stupid,
+		#because it doesnt work for a single master point, as the first CNP and laster MP are the same, got 4 months left,
+		#dont wont to break all the code by trying to fix this, so im adding in a nasty fix to allow a special case for
+		#single MP. This whole thing can be fixed by changing it to a system that sets CNP to MP(1)+1 and then does CNP<-CNP+1
+		#(looks backwards).
+
+		oneMPcase=False
+		if len(MasterPoints)==2: #so if there is only 1 MP and then the ghost point
+			oneMPcase=True
+
+		while (CNP!=MasterPoints[i+1,2] or oneMPcase):
+			oneMPcase=False #switch this stupid thing off now
 			#If else to check if we are at the end of the array, to loop back to the beginning.
 			if CNP==(len(contourData)-1):
 				target=0
@@ -415,7 +443,7 @@ def seedSlavePoints(distVector,contourData,MasterPoints,seedNumber,ax):
 
 			#if the current distance, plus the length of the data segment is larger then our current slaveSegment spacing. we will calculate where the slave seed should be placed, and what remains
 			if Dist+segDist >= segSize:
-				print 'Mpoint:',MasterPoints[i,2],'CPpos:',CPpos,'CNP:',CNP
+				#print 'Mpoint:',MasterPoints[i,2],'CPpos:',CPpos,'CNP:',CNP
 				ControlPoints[CPpos,:],remainder = calculatePointPositionOnLine(segSize-Dist,segDist,contourData[CNP,:],contourData[target,:])
 				nodeCount=nodeCount+1
 				#print '\t\tplacing a seed point at position',CPpos,'Point Positions [',ControlPoints[CPpos,0],ControlPoints[CPpos,1],'], remainder:',remainder
