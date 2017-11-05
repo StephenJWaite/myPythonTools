@@ -755,6 +755,40 @@ def transformCubicCoeffiencets(a,b,c,d,xn):
 			#aCoeffs[i],bCoeffs[i],cCoeffs[i],dCoeffs[i]=poly.c
 		return aCoeffs,bCoeffs,cCoeffs,dCoeffs
 
+def procrustesAlignment2D(pts1,pts2,scale=True):
+	#Function is used to perform 2D alignment on landmarks with corresponding points.
+
+	from scipy.linalg import orthogonal_procrustes
+
+	#Translate the centroids of the two data sets to the origin.
+	p1=pts1-np.mean(pts1,0)
+	p2=pts2-np.mean(pts2,0)
+
+	#If scale=True, we are removeing size information by setting centroid
+	#size to 1
+	if scale:
+		p1=p1/calculateCentroidSize(pts1[:,0],pts1[:,1])
+		p2=p2/calculateCentroidSize(pts2[:,0],pts2[:,1])
+
+	#Rotate and scale p2 to best match p1
+	R,s=orthogonal_procrustes(p1,p2) #finds the rotation matrix and scale
+	p2=np.dot(p2,R.T)*s #applys the above as the dot product of a vector and matrix
+
+	return p2,R,s*(1/calculateCentroidSize(pts2[:,0],pts2[:,1])),np.mean(pts2,0)
+
+def apply2DTransformation(pts1,T,R,s):
+	#First you translate
+	pts1-=T
+	#Then you scale
+	pts1*=s
+	#then you rotate
+	pts1=np.dot(pts1,R.T)
+
+	return pts1
+
+
+
+
 
 
 

@@ -5,7 +5,7 @@ import imageTools as IT
 
 workingDir = '/home/stephen/Documents/PhD/Data/Motility/SortedByLocation/'
 #pick your region
-region='CentralFront'
+region='CranialSac'
 #open the Processlist
 
 f,ax1=plt.subplots(1,1)
