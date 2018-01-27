@@ -76,15 +76,21 @@ for line in activeContours:
 	contourInformation=contourInformation+[[zPos,numContours]]
 	contourData=contourData+[contours]
 
-contractionMatrix,endtime=IT.createContractionMatrix(activeContours,contourInformation,contourData,CMap)
 
+contractionMatrix,endtime=IT.createContractionMatrix(activeContours,contourInformation,contourData,CMap)
+print np.shape(contourInformation)
+print np.shape(contourData[0])
 #lets make a nxm spatial array for the first time point, where n=(x,y,z) and m are the nodes
 cMshapeIM=np.shape(contractionMatrix)
+print cMshapeIM
 cMshape=[0]*4
 cMshape[0]=cMshapeIM[0]
 cMshape[1]=cMshapeIM[1]
 cMshape[2]=cMshapeIM[2]
 cMshape[3]=cMshapeIM[3]
+
+print cMshape
+print activeContours
 
 #Create a list for passive nodes at each time position, to be used for splining
 passiveList=np.zeros((passivePoints.shape[0],passivePoints.shape[1],cMshape[0]))

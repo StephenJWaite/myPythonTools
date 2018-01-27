@@ -5,7 +5,7 @@ from mayavi.core.pipeline_base import PipelineBase
 from mayavi.core.ui.api import SceneEditor, MlabSceneModel, MayaviScene
 import numpy as np
 
-workingDir='/home/stephen/OpenFOAM/Simulations2/Rumens/SplineChecks/RumenSplineTestCheck11'
+workingDir='/home/stephen/OpenFOAM/Simulations2/ParallelSplineCheck3'
 patchName='wall'
 pointTemp=np.loadtxt(workingDir+'/constant/patchPositions/' + patchName + '/' + str(0)  + '/patchDisplacements')[::10]*1000
 sourceTemp=np.loadtxt(workingDir+'/HMresults/'+ str(1) + '/source_points_fitting_hmf')

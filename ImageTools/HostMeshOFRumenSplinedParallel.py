@@ -15,13 +15,13 @@ from fieldwork.field import geometric_field
 from fieldwork.field import geometric_field_fitter as GFF
 from gias.common import fieldvi, transform3D
 from gias.common import alignment_fitting as af
-
+from copy import deepcopy
 
 print 'Running HostMeshMotility...'
 
 #Step one, create out contraction Matrix
-workingDir = './../imageToolsTestSpace/'
-workingDirOF = '/home/stephen/OpenFOAM/Simulations2/Rumens/SplineChecks/ParallelTests/ParallelSplineCheck3/'
+workingDir = '/home/stephen/OpenFOAM/PhDSimulations/MotionBiPhasic/ContractionContours/'
+workingDirOF = '/home/stephen/OpenFOAM/PhDSimulations/BiPhasicSimulation/'
 
 #outfolder for hostmeshing details
 os.mkdir(workingDirOF+'/HMresults')
@@ -40,12 +40,12 @@ patchNames=['inlet','wall']
 scale=0.001 #working in m in openFOAM, but HM is hardcoded for mm
 
 # fititng parameters for host mesh fitting
-host_mesh_pad = 10.0 # host mesh padding around slave points
+host_mesh_pad = 20.0 # host mesh padding around slave points
 host_elem_type = 'quad555' # quadrilateral cubic host elements
 host_elems = [1,1,2] # a single element host mesh
-maxit = 100
-sobd = [4,4,4]
-sobw = 0.000001#1e-10 #for quad444, 0.000005 is a good start, then crank
+maxit = 10
+sobd = [15,15,15]
+sobw = 2e-7 #0.000001#for quad444, 0.000005 is a good start, then crank
 xtol = 1e-12
 
 #===========================Static File IO==============================#
@@ -79,6 +79,7 @@ for patch in patchList:
 print index
 
 passivePoints=np.delete(passivePoints,(0),0)/scale
+#passivePoints=passivePoints[::100]
 
 #set up contour infromation arrays
 contourData=[]
@@ -93,13 +94,20 @@ for line in activeContours:
 
 contractionMatrix,endtime=IT.createContractionMatrix(activeContours,contourInformation,contourData,CMap)
 
+#contractionPositions=open(workingDir+'MeshPositions').readlines()
+#deformedMap=np.zeros(np.shape(contractionPositions)[0])
+#for i in range(np.shape(contractionPositions)[0]):
+#	deformedMap[i]=int(contractionPositions[i].rstrip().split()[1])
+#	
+#contractionMatrix,endtime=IT.createContractionMatrixDeformed(activeContours,contourInformation,contourData,CMap,deformedMap)
+
 #lets make a nxm spatial array for the first time point, where n=(x,y,z) and m are the nodes
 cMshapeIM=np.shape(contractionMatrix)
 cMshape=[0]*4
-cMshape[0]=cMshapeIM[0]
-cMshape[1]=cMshapeIM[1]
-cMshape[2]=cMshapeIM[2]
-cMshape[3]=cMshapeIM[3]
+cMshape[0]=np.shape(contractionMatrix)[0]
+cMshape[1]=np.shape(contractionMatrix)[1]
+cMshape[2]=np.shape(contractionMatrix[0][0])[0]
+cMshape[3]=np.shape(contractionMatrix[0][0])[1]
 
 #Create a list for passive nodes at each time position, to be used for splining
 passiveList=np.zeros((passivePoints.shape[0],passivePoints.shape[1],cMshape[0]))
@@ -108,21 +116,30 @@ passiveList=np.zeros((passivePoints.shape[0],passivePoints.shape[1],cMshape[0]))
 #==========================Host Mesh Fitting================================#
 
 #source points as contours
-temp=np.ones((cMshape[1],cMshape[2],cMshape[3]+1))
+#temp=np.ones((cMshape[1],cMshape[2],cMshape[3]+1))
+source_points_fitting=np.ones((1,3))
 for i in range(cMshape[1]):
-	print 'Shape check:',np.shape(temp[i,:,:2]),np.shape(contractionMatrix[0][i])
-	temp[i,:,:2]=(contractionMatrix[0][i])-256
-	print 'zPos:',contourInformation[i][0]
-	temp[i,:,2]=temp[i,:,2]*np.float(contourInformation[i][0])
+	cShape=np.shape(contractionMatrix[0][i])
+	print 'Shape check:',cShape
+	temp=np.ones((cShape[0],cShape[1]+1))
+	temp[:,:2]=contractionMatrix[0][i]
+	temp[:,2]=temp[:,2]*np.float(contourInformation[i][0])
+	source_points_fitting=np.vstack([source_points_fitting,temp])
 
-print 'countour shape:',np.shape(temp.reshape((cMshape[1]*cMshape[2],cMshape[3]+1)))
+source_points_fitting=np.delete(source_points_fitting,(0),0)
+print 'Source_points_fitting shape', np.shape(source_points_fitting)
 
-source_points_fitting = temp.reshape((cMshape[1]*cMshape[2],cMshape[3]+1))
+#fixedContour1=np.loadtxt(workingDir+'FixedContours/C1')
+#fixedContour2=np.loadtxt(workingDir+'FixedContours/C2')
+#fixedContour3=np.loadtxt(workingDir+'FixedContours/C3')
+#fixedContour4=np.loadtxt(workingDir+'FixedContours/C4')
 
+#fixedContours=scipy.vstack([fixedContour1,fixedContour2,fixedContour3,fixedContour4])
+#source_points_fitting=scipy.vstack([source_points_fitting,fixedContour1])
 
 
 # make host mesh
-host_mesh = GFF.makeHostMeshMulti(
+host_mesh_orig = GFF.makeHostMeshMulti(
             	passivePoints.T,
                 host_mesh_pad,
                 host_elem_type,
@@ -131,12 +148,32 @@ host_mesh = GFF.makeHostMeshMulti(
 
 
 #Store the original host mesh position
-HostMeshOrig=host_mesh.get_field_parameters()
+HostMeshOrig=host_mesh_orig.get_field_parameters()
+test=host_mesh_orig.get_field_parameters()
+
+print 'Host mesh shape'
+print test.shape
+hmfIndex=test.shape[1]/9
+#test[2][3*hmfIndex:4*hmfIndex]=-400
+#host_mesh_orig.set_field_parameters(test)
+#print test[2][:,0]
+test[2][1*hmfIndex:2*hmfIndex]=-670.5
+test[2][2*hmfIndex:3*hmfIndex]=-607.0
+test[2][3*hmfIndex:4*hmfIndex]=-543.5
+test[2][4*hmfIndex:5*hmfIndex]=-480.0
+test[2][5*hmfIndex:6*hmfIndex]=-451.75
+test[2][6*hmfIndex:7*hmfIndex]=-423.5
+test[2][7*hmfIndex:8*hmfIndex]=-395.25
+#print test[2][:,0]
+host_mesh_orig.set_field_parameters(test)
+
+host_mesh=deepcopy(host_mesh_orig)
+
 
 #embedding each patch For passive deform
 passivePoints_xi = host_mesh.find_closest_material_points(
                             passivePoints,
-                            initGD=[50,50,50],
+                            initGD=[200,200,200],
                             verbose=True,
                             )[0]
 
@@ -156,17 +193,23 @@ slave_xi = host_mesh.find_closest_material_points(
 #Loop through time points
 for timePoint in range(cMshape[0]):
 
-	#Read in the target points
-	print 'fitting time: ',timePoint
-	temp=np.ones((cMshape[1],cMshape[2],cMshape[3]+1))
-	for i in range(cMshape[1]):
-		print 'Shape check:',np.shape(temp[i,:,:2]),np.shape(contractionMatrix[timePoint][i])
-		temp[i,:,:2]=(contractionMatrix[timePoint][i])-256
-		print 'zPos:',contourInformation[i][0]
-		temp[i,:,2]=temp[i,:,2]*np.float(contourInformation[i][0])
+	print 'Processing time:', timePoint
 
-	# source points to be passived deformed (not fitted)
-	target_points = temp.reshape((cMshape[1]*cMshape[2],cMshape[3]+1))
+	host_mesh=deepcopy(host_mesh_orig)
+
+	#Read in the target points
+	target_points=np.ones((1,3))
+	for i in range(cMshape[1]):
+		cShape=np.shape(contractionMatrix[0][i])
+		print 'Shape check:',cShape
+		temp=np.ones((cShape[0],cShape[1]+1))
+		temp[:,:2]=contractionMatrix[timePoint][i]
+		temp[:,2]=temp[:,2]*np.float(contourInformation[i][0])
+		target_points=np.vstack([target_points,temp])
+
+	target_points=np.delete(target_points,(0),0)
+	print 'target_points shape', np.shape(target_points)
+	#target_points=scipy.vstack([target_points,fixedContour1])
 
 	# define some slave obj funcs
 	target_tree = cKDTree(target_points)
@@ -220,15 +263,15 @@ pos=0
 
 for p in range(numProc):
 	os.mkdir(workingDirOF+'processor'+str(p)+'/constant/patchDisplacements')
-	os.mkdir(workingDirOF+'processor'+str(p)+'/constant/patchPositions')
+	#os.mkdir(workingDirOF+'processor'+str(p)+'/constant/patchPositions')
 
 	for i in range(len(patchNames)):
 		print 'setting up file directories...'
 		os.mkdir(workingDirOF+'processor'+str(p)+'/constant/patchDisplacements/'+str(patchNames[i]))
-		os.mkdir(workingDirOF+'processor'+str(p)+'/constant/patchPositions/'+str(patchNames[i]))
+		#os.mkdir(workingDirOF+'processor'+str(p)+'/constant/patchPositions/'+str(patchNames[i]))
 		for k in range(cMshape[0]+1):
 			os.mkdir(workingDirOF+'processor'+str(p)+'/constant/patchDisplacements/'+str(patchNames[i])+'/'+str(k))
-			os.mkdir(workingDirOF+'processor'+str(p)+'/constant/patchPositions/'+str(patchNames[i])+'/'+str(k))
+			#os.mkdir(workingDirOF+'processor'+str(p)+'/constant/patchPositions/'+str(patchNames[i])+'/'+str(k))
 
 		if index[(p*len(patchNames))+i]!=-1:
 			print 'creating spline files for'+patchNames[i]+'on proc'+str(p)
@@ -256,7 +299,7 @@ for p in range(numProc):
 			#once we have filled the vectors, we write them to the time files
 			print 'saving time files...', patchNames[i]
 			#for time 0, we need our OF vector files
-			np.savetxt(workingDirOF+'processor'+str(p)+'/constant/patchPositions/'+str(patchNames[i])+'/'+str(0)+'/patchDisplacements',patchNodes[:,:,0])
+			#np.savetxt(workingDirOF+'processor'+str(p)+'/constant/patchPositions/'+str(patchNames[i])+'/'+str(0)+'/patchDisplacements',patchNodes[:,:,0])
 			FT.writeVectorField(workingDirOF+'processor'+str(p)+'/constant/patchDisplacements/'+str(patchNames[i])+'/'+str(0)+'/'+str(patchNames[i])+'A',aCoefs[:,:,0])
 			FT.writeVectorField(workingDirOF+'processor'+str(p)+'/constant/patchDisplacements/'+str(patchNames[i])+'/'+str(0)+'/'+str(patchNames[i])+'B',bCoefs[:,:,0])
 			FT.writeVectorField(workingDirOF+'processor'+str(p)+'/constant/patchDisplacements/'+str(patchNames[i])+'/'+str(0)+'/'+str(patchNames[i])+'C',cCoefs[:,:,0])
@@ -267,13 +310,13 @@ for p in range(numProc):
 				np.savetxt(workingDirOF+'processor'+str(p)+'/constant/patchDisplacements/'+str(patchNames[i])+'/'+str(k)+'/b',bCoefs[:,:,k])
 				np.savetxt(workingDirOF+'processor'+str(p)+'/constant/patchDisplacements/'+str(patchNames[i])+'/'+str(k)+'/c',cCoefs[:,:,k])
 				np.savetxt(workingDirOF+'processor'+str(p)+'/constant/patchDisplacements/'+str(patchNames[i])+'/'+str(k)+'/d',dCoefs[:,:,k])
-				np.savetxt(workingDirOF+'processor'+str(p)+'/constant/patchPositions/'+str(patchNames[i])+'/'+str(k)+'/patchDisplacements',patchNodes[:,:,k])
+				#np.savetxt(workingDirOF+'processor'+str(p)+'/constant/patchPositions/'+str(patchNames[i])+'/'+str(k)+'/patchDisplacements',patchNodes[:,:,k])
 
 			pos=index[(p*len(patchNames))+i]
 		else:
 			#just print a zero
 			print 'printing a zero field'
-			FT.createBlankVectorField(workingDirOF+'processor'+str(p)+'/constant/patchPositions/'+str(patchNames[i])+'/'+str(0),'patchDisplacementsVector')
+			#FT.createBlankVectorField(workingDirOF+'processor'+str(p)+'/constant/patchPositions/'+str(patchNames[i])+'/'+str(0),'patchDisplacementsVector')
 			FT.createBlankVectorField(workingDirOF+'processor'+str(p)+'/constant/patchDisplacements/'+str(patchNames[i])+'/'+str(0),str(patchNames[i])+'A')
 			FT.createBlankVectorField(workingDirOF+'processor'+str(p)+'/constant/patchDisplacements/'+str(patchNames[i])+'/'+str(0),str(patchNames[i])+'B')
 			FT.createBlankVectorField(workingDirOF+'processor'+str(p)+'/constant/patchDisplacements/'+str(patchNames[i])+'/'+str(0),str(patchNames[i])+'C')
@@ -286,8 +329,8 @@ for p in range(numProc):
 				FT.spoofEmptyDisplacementFile(workingDirOF+'processor'+str(p)+'/constant/patchDisplacements/'+str(patchNames[i])+'/'+str(k)+'/d')
 
 	
-IT.basicCubicSplinePlot(a,b.tolist(),c.tolist(),d.tolist(),timeVector)
-plt.plot(timeVector,yn,'or')
+#IT.basicCubicSplinePlot(a,b.tolist(),c.tolist(),d.tolist(),timeVector)
+#plt.plot(timeVector,yn,'or')
 plt.show()
 
 

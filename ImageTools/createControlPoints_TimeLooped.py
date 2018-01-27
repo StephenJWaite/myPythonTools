@@ -15,7 +15,7 @@ print 'Running createControlPoints'
 
 #Set up working directories
 location='Reticulum'
-fileName='4173b_02'
+fileName='6964_02(02)'
 contraction='Contraction1'
 region=''
 

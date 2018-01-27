@@ -1,8 +1,8 @@
 #script replaces xyz coords in ply file
 import numpy as np
-workingDir='/home/stephen/Documents/Python/myPythonTools/Geoms/SoblovTests/'
-filenamePLY='FixAttempt2'
-filenameXYZ='BMES3'
+workingDir='/home/stephen/OpenFOAM/Simulations2/Meshing/SuperRoofMeshes/SuperRoofSmoothedReticulum/'
+filenamePLY='Wall'
+filenameXYZ='Wall_hmf'
 fid=open(workingDir+filenamePLY+'.ply','r')
 fidwrite=open(workingDir+filenameXYZ+'_outfile.ply','w')
 flag=0

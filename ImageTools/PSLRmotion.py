@@ -16,6 +16,7 @@ peakTime=[]
 areasAll=[]
 cRest=[]
 cCont=[]
+legend=[]
 
 for line in activeContours:
 	print 'Opening contour:',line.rstrip()
@@ -39,6 +40,7 @@ for line in activeContours:
 
 		fid.close()
 
+		legend.append(line.rstrip())
 		peakTime.append(np.argmin(areas))
 		areasAll.append(areas)
 
@@ -49,13 +51,23 @@ for line in activeContours:
 print np.size(cRest),np.shape(cCont)
 
 f,ax1=plt.subplots(1,1)
-flib=5
+flib=1
+
+#Going to try flipping 6905_07 -> [1:3]
+#it flipped it back, cause of the landmark numbering lol
+
+
+
 ax1.plot(cRest[flib][:,0],cRest[flib][:,1]*-1,'ob')
 ax1.plot(cCont[flib][:,0],cCont[flib][:,1]*-1,'or')
 #############################################################################
 
 #############################################################################
 #Alignment procedures of rest and contraction position
+
+
+
+
 
 #Step 1: set up storeage vectors for rest and contraction information, and 
 #        perform 2D alignment.
@@ -99,22 +111,28 @@ for i in range(cShape[0]):
 #Perform PSLR on aligned geometries
 
 #Step 1: Flatten the input vectors
-t0=[0]*cShape[0]
-t1=[0]*cShape[0]
+t0=[0]*(cShape[0]-1)
+t1=[0]*(cShape[0]-1)
 
+TestShape=2
+count=0
 for i in range(cShape[0]):
-	t0[i]=np.ravel(rPoints[i])
-	t1[i]=np.ravel(cPoints[i])
+	if i==TestShape:
+		print 'skipping', i,':',legend[i]
+	else:
+		t0[count]=np.ravel(rPoints[i])
+		t1[count]=np.ravel(cPoints[i])
+		count+=1
 
 #Step 2: Perform PSL regression
-pls=PLSRegression(n_components=3)
+pls=PLSRegression(n_components=2)
 pls.fit(t0,t1)
 
 #Step 3: Sanity check prediction of a random shape
-TestShape=2
+
 
 samplePoints,sR,sS,sT=IT.procrustesAlignment2D(rMeanShape,cRest[TestShape])
-test=pls.predict(np.ravel(samplePoints).reshape(1,-1)) #PSLR needs to work with vectors in teh form [[]], its weird
+test=pls.predict(np.ravel(samplePoints).reshape(1,-1)) #PSLR needs to work with vectors in the form [[]], its weird
 test=test.reshape((cShape[1],cShape[2]))
 
 #transform the real contraciton points
@@ -124,26 +142,45 @@ f3,ax3=plt.subplots(1,1)
 ax3.plot(samplePoints[:,0],samplePoints[:,1]*-1,'ob')
 ax3.plot(contractedPoints[:,0],contractedPoints[:,1]*-1,'or')
 ax3.plot(test[:,0],test[:,1]*-1,'xk')
+ax3.axis('equal')
 
-n=cShape[0]
-kf_10 = cross_validation.KFold(n,n_folds=2, shuffle=False,random_state=1)
-mse=[]
+#Calcualte the bounding box
+bbox=[np.min(cPoints[TestShape][:,0]),np.max(cPoints[TestShape][:,0]),np.min(cPoints[TestShape][:,1]),np.max(cPoints[TestShape][:,1])]
+RMSE=np.sqrt(np.mean((cPoints[TestShape]-test)**2))
+unitLength=np.sqrt((bbox[0]-bbox[1])**2 + (bbox[2]-bbox[3])**2)
+print unitLength
+print RMSE/unitLength*100,'%'
 
-print 't0.shape:',np.shape(t0)
-print 't1.shape:',np.shape(t1)
+#Caluclate areas
+areaR=IT.calculateClosedContourArea(rPoints[TestShape][:,0],rPoints[TestShape][:,1])
+areaC=IT.calculateClosedContourArea(cPoints[TestShape][:,0],cPoints[TestShape][:,1])
+areaT=IT.calculateClosedContourArea(test[:,0],test[:,1])
 
-for i in np.arange(1,cShape[0]):
-	pls=PLSRegression(n_components=6)
-	scores=cross_validation.cross_val_score(pls,t0,t1,cv=kf_10,scoring='r2')
-	print scores
-	mse.append(-scores)
+print 'AR', areaR
+print 'AC:',areaC
+print 'AT:',areaT
+print 'Area percentrage:',(np.abs(areaC-areaT)/areaC)*100
 
-f4,ax4=plt.subplots(1,1)
-print np.array(mse).shape
-ax4.plot(np.arange(1,cShape[0]),np.array(mse),'-o')
-plt.xlabel('Number of components')
-plt.ylabel('MSE')
-plt.title('asfsdf')
+
+#n=cShape[0]
+#kf_10 = cross_validation.KFold(n,n_folds=2, shuffle=False,random_state=1)
+#mse=[]
+
+#print 't0.shape:',np.shape(t0)
+#print 't1.shape:',np.shape(t1)
+
+#for i in np.arange(1,cShape[0]):
+#	pls=PLSRegression(n_components=6)
+#	scores=cross_validation.cross_val_score(pls,t0,t1,cv=kf_10,scoring='r2')
+#	print scores
+#	mse.append(-scores)
+
+#f4,ax4=plt.subplots(1,1)
+#print np.array(mse).shape
+#ax4.plot(np.arange(1,cShape[0]),np.array(mse),'-o')
+#plt.xlabel('Number of components')
+#plt.ylabel('MSE')
+#plt.title('asfsdf')
 
 
 

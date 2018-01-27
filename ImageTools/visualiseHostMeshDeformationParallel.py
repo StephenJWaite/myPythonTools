@@ -7,9 +7,9 @@ import numpy as np
 
 print 'RUnning visualiseHostMeshDeformationParallel...'
 
-workingDir='/home/stephen/OpenFOAM/Simulations2/Rumens/SplineChecks/ParallelTests/ParallelSplineCheck2'
+workingDir='/home/stephen/OpenFOAM/Simulations2/Meshing/SuperRoofMeshes/SuperRoofSmoothedReticulum'
 patchName='wall'
-numProc=20 
+numProc=10 
 
 #pointTemp=np.loadtxt(workingDir+'/constant/patchPositions/' + patchName + '/' + str(0)  + '/patchDisplacements')[::10]*1000
 pointTemp=np.zeros((1,3))

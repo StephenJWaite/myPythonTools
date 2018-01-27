@@ -613,12 +613,12 @@ def createContractionMatrix(activeContours,contourInformation,contourData,CMap):
 	contractionMatrix=[[0]*np.shape(activeContours)[0] for i in range(endtime)]
 	#
 	print 'contractionMatrix shape:',np.shape(contractionMatrix)
-	MapFunc=interp1d(CMap[:,0],CMap[:,1],kind='cubic')
+	MapFunc=interp1d(CMap[:,0],CMap[:,1],kind='linear')
 	print CMap
 
 	for i in range(np.shape(activeContours)[0]):
 		print np.float(contourInformation[i][0])
-		spoint=np.int(MapFunc(np.float(contourInformation[i][0])))
+		spoint=np.int(round(MapFunc(np.float(contourInformation[i][0]))))
 		print 'Processing slice:',i,'at',contourInformation[i][0]
 		print '\tStart Points:',spoint, 'End Point:',spoint+int(contourInformation[i][1])
 		print 'looping from',0,'to',spoint
@@ -636,7 +636,68 @@ def createContractionMatrix(activeContours,contourInformation,contourData,CMap):
 			#print 'i:',i,'j:',j,'slice: end'
 			contractionMatrix[j][i]=contourData[i][-1]
 
+
+	print np.shape(contractionMatrix)
 	return contractionMatrix,endtime
+
+def createContractionMatrixDeformed(activeContours,contourInformation,contourData,CMap,deformedList):
+	print 'Running createContractionMatrixDeformed...'
+	
+	#Print out some sanity statistics
+	print 'Contour information:'
+	for i in range(np.size(activeContours)):
+		print '\t',activeContours[i].rstrip(),'zPos:',contourInformation[i][0],'number Contours',contourInformation[i][1]
+
+	#So the current plan is, to bit a time range (roughly 2 minutes).
+	#we create a nxd array where n is the number of slice planes we are using, and d is seconds.
+	#using our contraciton map from literature, we will place active contours in the correct
+	#times, and duplicate their first and last slices to rill out time on either side.
+	#will need to calculate a suitable end time, as some contours contract for a while.
+	#This will be dependent on when they start in the contraciton map. 
+	#For now we will take the largest contraciton time and tack it onto the end time in the 
+	#CMAP
+	endtime=np.int(CMap[-1,1]+max(np.asarray(contourInformation)[:,1].astype(float)))+5 #its 5 because we are adding in extra time points at the start
+	print 'End time is:',endtime
+
+	#set up the contractionMatrix
+	#contractionMatrix=[[0]*np.shape(activeContours)[0]]*endtime <-never do this
+	contractionMatrix=[[0]*np.shape(activeContours)[0] for i in range(endtime)]
+	#
+	print 'contractionMatrix shape:',np.shape(contractionMatrix)
+	MapFunc=interp1d(CMap[:,0],CMap[:,1],kind='cubic')
+	print CMap
+
+	for i in range(np.shape(activeContours)[0]):
+		print np.float(contourInformation[i][0])
+		print MapFunc(np.float(contourInformation[i][0]))
+		print np.int(MapFunc(np.float(contourInformation[i][0])))
+		spoint=np.int(round(MapFunc(np.float(contourInformation[i][0]))))+3
+
+		print 'Processing slice:',i,'at',contourInformation[i][0]
+		print '\tStart Points:',spoint, 'End Point:',spoint+int(contourInformation[i][1])
+		print 'setting up deformed initialaztion for first 4 seconds'
+		contractionMatrix[0][i]=contourData[i][int(deformedList[i])]
+		contractionMatrix[1][i]=contourData[i][int(deformedList[i])]
+		contractionMatrix[2][i]=contourData[i][0]
+		contractionMatrix[3][i]=contourData[i][0]
+		print 'looping from',4,'to',spoint
+		for j in range(4,spoint):
+			#print 'i:',i,'j:',j,'slice:',0
+			contractionMatrix[j][i]=contourData[i][0]
+
+		print 'looping from',spoint,'to',np.int(spoint+int(contourInformation[i][1]))
+		for j in range(spoint,np.int(spoint+int(contourInformation[i][1]))):
+			#print 'i:',i,'j:',j,'slice',(j-spoint)
+			contractionMatrix[j][i]=contourData[i][j-spoint]
+
+		print 'looping from',np.int(spoint+int(contourInformation[i][1])),'to',endtime
+		for j in range(np.int(spoint+int(contourInformation[i][1])),endtime):
+			#print 'i:',i,'j:',j,'slice: end'
+			contractionMatrix[j][i]=contourData[i][-1]
+
+
+	print np.shape(contractionMatrix)
+	return contractionMatrix,endtime	
 
 def calculateCentroidPosition(x,y):
 	return sum(x)/len(x),sum(y)/len(y)
@@ -785,6 +846,49 @@ def apply2DTransformation(pts1,T,R,s):
 	pts1=np.dot(pts1,R.T)
 
 	return pts1
+
+def insertXYZintoPLY(XYZ,PLYDir,outDir):
+#workingDir='/home/stephen/OpenFOAM/Simulations2/Meshing/SuperRoofMeshes/SuperRoofSmoothedReticulum/'
+#filenamePLY='Wall'
+#filenameXYZ='Wall_hmf'
+	fid=open(PLYDir,'r')
+	fidwrite=open(outDir,'w')
+	flag=0
+	count=0
+	#loop through line by line
+	for line in fid:
+		if flag==1:
+			linetemp=map(float,line.rstrip().split())
+			#print np.shape(temp)
+			if np.shape(linetemp)[0]==3:
+				temp=vertexArray[count,:]
+				fidwrite.write('{0} '.format(temp[0]))
+				fidwrite.write('{0} '.format(temp[1]))
+				fidwrite.write('{0}\n'.format(temp[2]))
+				count=count+1
+			else:
+				flag=2
+				fidwrite.write(line)
+		else:
+			fidwrite.write(line)
+			
+		#we move values into an array
+		if line[0:14]=='element vertex':
+			vertexNum=int(line[14:].rstrip())
+			#vertexArray=np.zeros((vertexNum,3))
+			#read in xyz file
+			vertexArray=XYZ#np.loadtxt(workingDir+filenameXYZ+'.xyz')
+			#sanit check dimensions
+			print 'vertexNum:',vertexNum,'vertexArray:',vertexArray.shape
+
+		if line.rstrip()=='end_header':
+			#print 'hello'
+			flag=1
+
+		#here we write to the new file
+	
+	#export xyz
+	print 'finished reading'
 
 
 
